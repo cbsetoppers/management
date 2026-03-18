@@ -6,7 +6,8 @@ import {
     Shield, Plus, Trash2, Pencil, Eye, EyeOff, ChevronRight, ChevronUp, ChevronDown,
     Zap, BarChart3, AlertTriangle, CheckCircle2, XCircle, Github,
     RefreshCw, MessageSquare, Crown, Star, Lock, Sun, Moon, BookOpen, Download,
-    ShoppingBag, Tag, Package, IndianRupee, Image as ImageIcon
+    ShoppingBag, Tag, Package, IndianRupee, Image as ImageIcon,
+    Loader2, UploadCloud
 } from 'lucide-react';
 import {
     fetchAdminStats, fetchAllStudents, fetchMaintenanceSettings,
@@ -1398,6 +1399,33 @@ const StoreView: React.FC = () => {
         stock_status: 'In Stock',
         category: 'Study Material',
     });
+    const [uploading, setUploading] = useState(false);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('image', file);
+
+        try {
+            const response = await fetch(`https://api.imgbb.com/1/upload?key=af5ca570bb7a1562dae8ef0c7f01a585`, {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json();
+            if (result.success) {
+                setForm(p => ({ ...p, image_url: result.data.url }));
+            } else {
+                alert('Upload failed: ' + (result.error?.message || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Image upload error. Please check your connection.');
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const loadProducts = useCallback(async () => {
         setLoading(true);
@@ -1507,19 +1535,42 @@ const StoreView: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Image URL</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
-                                            placeholder="https://image-link.com"
-                                            value={form.image_url}
-                                            onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))}
-                                        />
-                                        {form.image_url && (
-                                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-white/5">
-                                                <img src={form.image_url} className="w-full h-full object-cover" />
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Product Image</label>
+                                    <div className="flex gap-3">
+                                        <div className="flex-1 space-y-2">
+                                            <input
+                                                className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                                placeholder="Paste URL or Upload ->"
+                                                value={form.image_url}
+                                                onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))}
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <label className="flex-1">
+                                                    <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                                                    <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-dashed transition-all cursor-pointer ${uploading ? 'bg-slate-900/10 border-slate-900/20 text-slate-400' : 'bg-violet-600/5 border-violet-500/30 text-violet-400 hover:bg-violet-600/10'}`}>
+                                                        {uploading ? <Loader2 className="animate-spin" size={12} /> : <UploadCloud size={12} />}
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">{uploading ? 'Uploading...' : 'Upload Local Image'}</span>
+                                                    </div>
+                                                </label>
+                                                {form.image_url && (
+                                                    <button onClick={() => setForm(p => ({ ...p, image_url: '' }))} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
+                                        <div className="w-24 h-24 rounded-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 shrink-0 bg-slate-900/[0.05] dark:bg-white/[0.05] flex items-center justify-center relative group">
+                                            {form.image_url ? (
+                                                <img src={form.image_url} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                                            ) : (
+                                                <ImageIcon size={32} className="text-slate-300 dark:text-white/10" />
+                                            )}
+                                            {uploading && (
+                                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
+                                                    <Loader2 className="animate-spin text-white" size={20} />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
