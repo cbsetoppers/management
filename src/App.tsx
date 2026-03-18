@@ -5,7 +5,8 @@ import {
     ShieldAlert, Calendar, Clock, TrendingUp, Activity,
     Shield, Plus, Trash2, Pencil, Eye, EyeOff, ChevronRight, ChevronUp, ChevronDown,
     Zap, BarChart3, AlertTriangle, CheckCircle2, XCircle, Github,
-    RefreshCw, MessageSquare, Crown, Star, Lock, Sun, Moon, BookOpen, Download
+    RefreshCw, MessageSquare, Crown, Star, Lock, Sun, Moon, BookOpen, Download,
+    ShoppingBag, Tag, Package, IndianRupee, Image as ImageIcon
 } from 'lucide-react';
 import {
     fetchAdminStats, fetchAllStudents, fetchMaintenanceSettings,
@@ -15,10 +16,11 @@ import {
     fetchSubjects, createSubject, deleteSubject, updateSubject,
     fetchFolders, createFolder, deleteFolder, updateFolder,
     fetchMaterials, createMaterial, deleteMaterial, updateMaterial,
-    Subject, Folder, Material, SubjectCategory, MaterialType
+    fetchStoreProducts, createStoreProduct, deleteStoreProduct, updateStoreProduct,
+    Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct
 } from './services/supabase';
 
-type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators';
+type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators' | 'store';
 
 const LOGO_URL = "https://i.ibb.co/vC4MYFFk/1770137585956.png";
 
@@ -1377,6 +1379,283 @@ const SettingsView: React.FC = () => {
 };
 
 // ─────────────────────────────────────────────────────────────────────
+// STORE VIEW
+// ─────────────────────────────────────────────────────────────────────
+const StoreView: React.FC = () => {
+    const [products, setProducts] = useState<StoreProduct[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isAdding, setIsAdding] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [search, setSearch] = useState('');
+
+    const [form, setForm] = useState<Partial<StoreProduct>>({
+        name: '',
+        description: '',
+        image_url: '',
+        mrp: 0,
+        selling_price: 0,
+        stock_status: 'In Stock',
+        category: 'Study Material',
+    });
+
+    const loadProducts = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await fetchStoreProducts();
+            setProducts(data);
+        } catch (_) { }
+        setLoading(false);
+    }, []);
+
+    useEffect(() => { loadProducts(); }, [loadProducts]);
+
+    const handleSave = async () => {
+        if (!form.name || !form.selling_price) return alert('Name and Selling Price are required');
+        try {
+            if (isEditing && editingId) {
+                await updateStoreProduct(editingId, form);
+            } else {
+                await createStoreProduct({ ...form, order_index: products.length });
+            }
+            setIsAdding(false);
+            setIsEditing(false);
+            setEditingId(null);
+            setForm({ name: '', description: '', image_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' });
+            loadProducts();
+        } catch (e: any) { alert(e.message || 'Error saving product'); }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+        try {
+            await deleteStoreProduct(id);
+            loadProducts();
+        } catch (_) { alert('Error deleting product'); }
+    };
+
+    const startEdit = (p: StoreProduct) => {
+        setForm(p);
+        setEditingId(p.id);
+        setIsEditing(true);
+        setIsAdding(true);
+    };
+
+    const filtered = products.filter(p => 
+        p.name.toLowerCase().includes(search.toLowerCase()) || 
+        p.category?.toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Toppers Store</h1>
+                    <p className="text-slate-900/30 dark:text-white/30 text-sm font-medium mt-1">Manage physical and digital products for students.</p>
+                </div>
+                <button
+                    onClick={() => { setIsAdding(true); setIsEditing(false); setForm({ name: '', description: '', image_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' }); }}
+                    className="flex items-center gap-2 px-5 py-3 bg-violet-600/80 hover:bg-violet-600 border border-violet-500/30 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all active:scale-95 shadow-lg shadow-violet-900/20"
+                >
+                    <Plus size={14} /> Add Product
+                </button>
+            </div>
+
+            <div className="relative w-full">
+                <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900/25 dark:text-white/25" />
+                <input
+                    type="text"
+                    placeholder="Search products by name or category..."
+                    className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-900/20 dark:placeholder:text-white/20 outline-none focus:border-violet-500/50 transition-all"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                />
+            </div>
+
+            {isAdding && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsAdding(false)} />
+                    <div className="relative bg-white dark:bg-[#0a0a1a] border border-slate-900/10 dark:border-white/10 rounded-3xl p-8 w-full max-w-2xl z-10 shadow-2xl overflow-y-auto max-h-[90vh]">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-violet-600/20 text-violet-400 rounded-xl flex items-center justify-center">
+                                {isEditing ? <Pencil size={18} /> : <Plus size={18} />}
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{isEditing ? 'Edit Product' : 'New Product'}</h3>
+                                <p className="text-[10px] text-slate-900/30 dark:text-white/30 font-bold uppercase tracking-widest">Toppers Store Inventory</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Product Name</label>
+                                    <input
+                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                        placeholder="NCERT Physics Volume 1"
+                                        value={form.name}
+                                        onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Category</label>
+                                    <input
+                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                        placeholder="Books, Notes, etc."
+                                        value={form.category}
+                                        onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Image URL</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                            placeholder="https://image-link.com"
+                                            value={form.image_url}
+                                            onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))}
+                                        />
+                                        {form.image_url && (
+                                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-white/5">
+                                                <img src={form.image_url} className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">MRP (₹)</label>
+                                        <input
+                                            type="number"
+                                            className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                            placeholder="499"
+                                            value={form.mrp}
+                                            onChange={e => setForm(p => ({ ...p, mrp: parseFloat(e.target.value) || 0 }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Selling Price (₹)</label>
+                                        <input
+                                            type="number"
+                                            className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                            placeholder="399"
+                                            value={form.selling_price}
+                                            onChange={e => setForm(p => ({ ...p, selling_price: parseFloat(e.target.value) || 0 }))}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Description</label>
+                                    <textarea
+                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all min-h-[140px] resize-none"
+                                        placeholder="Describe the product details..."
+                                        value={form.description}
+                                        onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Availability</label>
+                                    <select
+                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                        value={form.stock_status}
+                                        onChange={e => setForm(p => ({ ...p, stock_status: e.target.value as any }))}
+                                    >
+                                        <option value="In Stock">In Stock</option>
+                                        <option value="Out of Stock">Out of Stock</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-8">
+                            <button onClick={() => setIsAdding(false)} className="flex-1 py-3 border border-slate-900/10 dark:border-white/10 text-slate-900/40 dark:text-white/40 font-black uppercase text-[10px] tracking-widest rounded-xl hover:border-slate-900/20 dark:hover:border-white/20 hover:text-slate-900/60 dark:hover:text-white/60 transition-all">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="flex-1 py-3 bg-violet-600 hover:bg-violet-500 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <CheckCircle2 size={14} />
+                                {isEditing ? 'Update Product' : 'Save Product'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {loading ? (
+                    [...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-2xl h-64 animate-pulse" />
+                    ))
+                ) : (
+                    filtered.map(p => (
+                        <motion.div
+                            key={p.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl overflow-hidden group hover:border-violet-500/30 transition-all shadow-sm hover:shadow-xl hover:shadow-violet-900/5"
+                        >
+                            <div className="aspect-[4/3] bg-slate-100 dark:bg-white/[0.03] relative overflow-hidden">
+                                {p.image_url ? (
+                                    <img src={p.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.name} />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-white/10">
+                                        <ImageIcon size={48} />
+                                    </div>
+                                )}
+                                <div className="absolute top-3 left-3 flex gap-2">
+                                    <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock_status === 'In Stock' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                        {p.stock_status}
+                                    </span>
+                                    {p.category && (
+                                        <span className="px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-lg text-[8px] font-black uppercase tracking-widest">
+                                            {p.category}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                    <button onClick={() => startEdit(p)} className="p-3 bg-white text-black rounded-xl hover:bg-violet-500 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"><Pencil size={18} /></button>
+                                    <button onClick={() => handleDelete(p.id)} className="p-3 bg-white text-black rounded-xl hover:bg-red-500 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"><Trash2 size={18} /></button>
+                                </div>
+                            </div>
+                            <div className="p-5">
+                                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{p.name}</h3>
+                                <p className="text-[10px] text-slate-900/30 dark:text-white/30 mt-1 line-clamp-2 min-h-[30px]">{p.description || 'No description provided.'}</p>
+                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-900/5 dark:border-white/5">
+                                    <div className="flex flex-col">
+                                        <span className="text-[8px] text-slate-900/30 dark:text-white/30 uppercase font-black tracking-widest">Price</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-lg font-black text-violet-400">₹{p.selling_price}</span>
+                                            {p.mrp > p.selling_price && (
+                                                <span className="text-[10px] text-slate-900/20 dark:text-white/20 line-through">₹{p.mrp}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-lg bg-violet-600/10 text-violet-400 flex items-center justify-center">
+                                        <ShoppingBag size={14} />
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))
+                )}
+            </div>
+            {!loading && filtered.length === 0 && (
+                <div className="py-20 text-center">
+                    <div className="w-16 h-16 bg-slate-900/5 dark:bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-300">
+                        <Package size={32} />
+                    </div>
+                    <p className="text-slate-900/30 dark:text-white/30 font-bold">No products found in the store.</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────
 // MAIN APP
 // ─────────────────────────────────────────────────────────────────────
 const AdminApp: React.FC = () => {
@@ -1448,6 +1727,7 @@ const AdminApp: React.FC = () => {
         { id: 'dashboard', icon: <LayoutDashboard size={16} />, label: 'Dashboard' },
         { id: 'students', icon: <Users size={16} />, label: 'Students' },
         { id: 'operators', icon: <Shield size={16} />, label: 'Operators' },
+        { id: 'store', icon: <ShoppingBag size={16} />, label: 'Toppers Store' },
         { id: 'content', icon: <BookOpen size={16} />, label: 'Content Manager' },
         { id: 'settings', icon: <Settings size={16} />, label: 'Settings' },
     ];
@@ -1583,6 +1863,7 @@ const AdminApp: React.FC = () => {
                             {view === 'dashboard' && <DashboardView stats={stats} operator={operator} onRefresh={loadData} loading={loading} setView={setView} />}
                             {view === 'students' && <StudentsView students={students} loading={loading} />}
                             {view === 'operators' && <OperatorsView currentOperator={operator} />}
+                            {view === 'store' && <StoreView />}
                             {view === 'content' && <ContentView />}
                             {view === 'settings' && <SettingsView />}
                         </motion.div>

@@ -103,6 +103,19 @@ export interface Material {
     created_at: string;
 }
 
+export interface StoreProduct {
+    id: string;
+    name: string;
+    description: string;
+    image_url: string;
+    mrp: number;
+    selling_price: number;
+    stock_status: 'In Stock' | 'Out of Stock';
+    category?: string;
+    order_index: number;
+    created_at: string;
+}
+
 // SUBJECTS
 export const fetchSubjects = async (): Promise<Subject[]> => {
     const { data, error } = await supabase.from('subjects').select('*').order('order_index');
@@ -177,6 +190,29 @@ export const deleteMaterial = async (id: string) => {
 
 export const updateMaterial = async (id: string, updates: Partial<Material>) => {
     const { data, error } = await supabase.from('materials').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+};
+
+// STORE PRODUCTS
+export const fetchStoreProducts = async (): Promise<StoreProduct[]> => {
+    const { data, error } = await supabase.from('store_products').select('*').order('order_index');
+    if (error) throw error;
+    return data || [];
+};
+
+export const createStoreProduct = async (product: Partial<StoreProduct>) => {
+    const { data, error } = await supabase.from('store_products').insert([product]).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const deleteStoreProduct = async (id: string) => {
+    await supabase.from('store_products').delete().eq('id', id);
+};
+
+export const updateStoreProduct = async (id: string, updates: Partial<StoreProduct>) => {
+    const { data, error } = await supabase.from('store_products').update(updates).eq('id', id).select().single();
     if (error) throw error;
     return data;
 };
