@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">CBSE Admin</string>
-    <string name="title_activity_main">CBSE Admin</string>
-    <string name="package_name">com.cbsetoppers.admin</string>
-    <string name="custom_url_scheme">com.cbsetoppers.admin</string>
-</resources>
