@@ -1403,13 +1403,13 @@ const StoreView: React.FC = () => {
         category: 'Study Material',
     });
 
-    const [uploading, setUploading] = useState(false);
+    const [uploadingIdx, setUploadingIdx] = useState<number | 'main' | null>(null);
 
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'main' | number) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploading(true);
+        setUploadingIdx(target);
         const formData = new FormData();
         formData.append('image', file);
 
@@ -1420,14 +1420,20 @@ const StoreView: React.FC = () => {
             });
             const result = await response.json();
             if (result.success) {
-                setForm(p => ({ ...p, image_url: result.data.url }));
+                if (target === 'main') {
+                    setForm(p => ({ ...p, image_url: result.data.url }));
+                } else {
+                    const next = [...(form.image_urls || [])];
+                    next[target] = result.data.url;
+                    setForm(p => ({ ...p, image_urls: next }));
+                }
             } else {
                 alert('Upload failed: ' + (result.error?.message || 'Unknown error'));
             }
         } catch (err) {
             alert('Image upload error. Please check your connection.');
         } finally {
-            setUploading(false);
+            setUploadingIdx(null);
         }
     };
 
@@ -1552,10 +1558,10 @@ const StoreView: React.FC = () => {
                                             />
                                             <div className="flex items-center gap-2">
                                                 <label className="flex-1">
-                                                    <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
-                                                    <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-dashed transition-all cursor-pointer ${uploading ? 'bg-slate-900/10 border-slate-900/20 text-slate-400' : 'bg-violet-600/5 border-violet-500/30 text-violet-400 hover:bg-violet-600/10'}`}>
-                                                        {uploading ? <Loader2 className="animate-spin" size={12} /> : <UploadCloud size={12} />}
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">{uploading ? 'Uploading...' : 'Upload Local Image'}</span>
+                                                    <input type="file" className="hidden" accept="image/*" onChange={e => handleUpload(e, 'main')} disabled={uploadingIdx !== null} />
+                                                    <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-dashed transition-all cursor-pointer ${uploadingIdx === 'main' ? 'bg-slate-900/10 border-slate-900/20 text-slate-400' : 'bg-violet-600/5 border-violet-500/30 text-violet-400 hover:bg-violet-600/10'}`}>
+                                                        {uploadingIdx === 'main' ? <Loader2 className="animate-spin" size={12} /> : <UploadCloud size={12} />}
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">{uploadingIdx === 'main' ? 'Uploading...' : 'Upload Local Image'}</span>
                                                     </div>
                                                 </label>
                                                 {form.image_url && (
@@ -1571,7 +1577,7 @@ const StoreView: React.FC = () => {
                                             ) : (
                                                 <ImageIcon size={32} className="text-slate-300 dark:text-white/10" />
                                             )}
-                                            {uploading && (
+                                            {uploadingIdx === 'main' && (
                                                 <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center">
                                                     <Loader2 className="animate-spin text-white" size={20} />
                                                 </div>
@@ -1664,32 +1670,57 @@ const StoreView: React.FC = () => {
 
                             <div className="col-span-1 md:col-span-2 space-y-4 pt-6 mt-2 border-t border-slate-900/10 dark:border-white/10">
                                 <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Additional Product Photos</label>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                                     {(form.image_urls || []).map((url, idx) => (
-                                        <div key={idx} className="flex gap-2">
-                                            <input
-                                                className="flex-1 bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-2 text-[10px] font-medium text-slate-900 dark:text-white outline-none"
-                                                value={url}
-                                                placeholder="Photo URL"
-                                                onChange={e => {
-                                                    const next = [...(form.image_urls || [])];
-                                                    next[idx] = e.target.value;
-                                                    setForm({ ...form, image_urls: next });
-                                                }}
-                                            />
-                                            <button onClick={() => {
-                                                const next = (form.image_urls || []).filter((_, i) => i !== idx);
-                                                setForm({ ...form, image_urls: next });
-                                            }} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
-                                                <Trash2 size={12} />
-                                            </button>
+                                        <div key={idx} className="p-3 bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-2xl space-y-3">
+                                            <div className="flex gap-2">
+                                                <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-900/10 dark:border-white/10 shrink-0 bg-white dark:bg-slate-900 flex items-center justify-center relative">
+                                                    {url ? (
+                                                        <img src={url} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <ImageIcon size={16} className="text-slate-300 dark:text-white/10" />
+                                                    )}
+                                                    {uploadingIdx === idx && (
+                                                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                                                            <Loader2 className="animate-spin text-white" size={14} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 space-y-1.5">
+                                                    <input
+                                                        className="w-full bg-transparent border-none p-0 text-[10px] font-bold text-slate-900 dark:text-white outline-none placeholder:text-slate-900/20 dark:placeholder:text-white/20"
+                                                        value={url}
+                                                        placeholder="Photo URL or Upload ->"
+                                                        onChange={e => {
+                                                            const next = [...(form.image_urls || [])];
+                                                            next[idx] = e.target.value;
+                                                            setForm({ ...form, image_urls: next });
+                                                        }}
+                                                    />
+                                                    <div className="flex items-center gap-2">
+                                                        <label className="flex-1 h-6">
+                                                            <input type="file" className="hidden" accept="image/*" onChange={e => handleUpload(e, idx)} disabled={uploadingIdx !== null} />
+                                                            <div className={`flex items-center justify-center gap-1.5 h-full rounded-md border border-dashed transition-all cursor-pointer ${uploadingIdx === idx ? 'bg-slate-900/10 border-slate-900/20 text-slate-400' : 'bg-violet-600/5 border-violet-500/30 text-violet-400 hover:bg-violet-600/10'}`}>
+                                                                {uploadingIdx === idx ? <Loader2 className="animate-spin" size={8} /> : <UploadCloud size={8} />}
+                                                                <span className="text-[7px] font-black uppercase tracking-widest">{uploadingIdx === idx ? '...' : 'Upload'}</span>
+                                                            </div>
+                                                        </label>
+                                                        <button onClick={() => {
+                                                            const next = (form.image_urls || []).filter((_, i) => i !== idx);
+                                                            setForm({ ...form, image_urls: next });
+                                                        }} className="p-1 text-red-400 hover:bg-red-400/10 rounded-md">
+                                                            <Trash2 size={10} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     ))}
                                     <button 
                                         onClick={() => setForm({ ...form, image_urls: [...(form.image_urls || []), ''] })}
-                                        className="col-span-1 md:col-span-2 py-3 border border-dashed border-slate-200 dark:border-white/10 rounded-xl text-[9px] font-black uppercase text-slate-400 hover:text-violet-500 hover:border-violet-500/50 transition-all"
+                                        className="col-span-1 md:col-span-2 py-4 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl text-[9px] font-black uppercase text-slate-400 hover:text-violet-500 hover:border-violet-500/50 transition-all bg-slate-900/[0.02] dark:bg-white/[0.01]"
                                     >
-                                        + Add Additional Photo Link
+                                        + Add Additional Photo Step
                                     </button>
                                 </div>
                             </div>
