@@ -731,7 +731,7 @@ const ContentView: React.FC = () => {
 
         const hasHigher = subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c));
 
-        if (subForm.category === 'Core') {
+        if (subForm.category === 'Core' && !hasExams) {
             if (hasHigher && (!subForm.target_streams || subForm.target_streams.length === 0)) {
                 return alert('Stream is mandatory for Class XI/XII Core subjects');
             }
