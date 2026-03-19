@@ -25,37 +25,7 @@ type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators' | 's
 
 const LOGO_URL = "https://i.ibb.co/vC4MYFFk/1770137585956.png";
 
-const SUBJECT_ICONS = [
-    { id: 'basketball', name: 'Basketball/Sports', url: '/assets/subjects/basketball.png' },
-    { id: 'biology', name: 'Biology/Science', url: '/assets/subjects/biology.png' },
-    { id: 'book', name: 'General/Book', url: '/assets/subjects/book.png' },
-    { id: 'bookworm', name: 'Bookworm/Reading', url: '/assets/subjects/bookworm.png' },
-    { id: 'botany', name: 'Botany/Plants', url: '/assets/subjects/botany.png' },
-    { id: 'business_and_finance', name: 'Business/Finance', url: '/assets/subjects/business_and_finance.png' },
-    { id: 'calculator', name: 'Math/Calculator', url: '/assets/subjects/calculator.png' },
-    { id: 'chemistry', name: 'Chemistry/Lab', url: '/assets/subjects/chemistry.png' },
-    { id: 'coloring', name: 'Art/Coloring', url: '/assets/subjects/coloring.png' },
-    { id: 'compass', name: 'Geography/Navigation', url: '/assets/subjects/compass.png' },
-    { id: 'diet', name: 'Health/Diet', url: '/assets/subjects/diet.png' },
-    { id: 'education', name: 'Education/General', url: '/assets/subjects/education.png' },
-    { id: 'eng', name: 'English/Lang', url: '/assets/subjects/eng.png' },
-    { id: 'exercise', name: 'P.E./Exercise', url: '/assets/subjects/exercise.png' },
-    { id: 'geography', name: 'Geography/Map', url: '/assets/subjects/geography.png' },
-    { id: 'government', name: 'Civics/Govt', url: '/assets/subjects/government.png' },
-    { id: 'guitar', name: 'Music/Guitar', url: '/assets/subjects/guitar.png' },
-    { id: 'history_book', name: 'History/Book', url: '/assets/subjects/history_book.png' },
-    { id: 'landscape', name: 'Landscape/Geo', url: '/assets/subjects/landscape.png' },
-    { id: 'language', name: 'Language/World', url: '/assets/subjects/language.png' },
-    { id: 'math_book', name: 'Math/Book', url: '/assets/subjects/math_book.png' },
-    { id: 'maths', name: 'Mathematics', url: '/assets/subjects/maths.png' },
-    { id: 'neural', name: 'AI/Neural', url: '/assets/subjects/neural.png' },
-    { id: 'psychology', name: 'Psychology/Mind', url: '/assets/subjects/psychology.png' },
-    { id: 'relativity', name: 'Physics/Einstein', url: '/assets/subjects/relativity.png' },
-    { id: 'society', name: 'Society/Group', url: '/assets/subjects/society.png' },
-    { id: 'sports', name: 'Sports/Games', url: '/assets/subjects/sports.png' },
-    { id: 'tools', name: 'Tools/Engineering', url: '/assets/subjects/tools.png' },
-    { id: 'writingboard', name: 'Math/Writing', url: '/assets/subjects/writingboard.png' }
-];
+// Custom Icon system migrated to ImgBB
 
 const ROLE_CONFIG: Record<OperatorRole, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
     founder: {
@@ -679,6 +649,9 @@ const ContentView: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [materials, setMaterials] = useState<Material[]>([]);
     const [downloading, setDownloading] = useState<string | null>(null);
+    const [subSearch, setSubSearch] = useState('');
+    const [creationStep, setCreationStep] = useState(0); // 0: Select Target, 1: Form
+    const [targetType, setTargetType] = useState<string>(''); // 'JEE', 'CUET', 'NEET', 'CBSE'
 
     const handleDownload = async (url: string, title: string) => {
         if (downloading) return;
@@ -711,10 +684,8 @@ const ContentView: React.FC = () => {
     // Form states
     const [subForm, setSubForm] = useState<Partial<Subject>>({
         category: 'Core',
-        target_class: 'XII', // Keep for now
-        target_stream: 'PCM', // Keep for now
-        target_classes: ['XII'],
-        target_streams: ['PCM'],
+        target_classes: [],
+        target_streams: [],
         target_exams: [],
         icon_url: '/assets/subjects/relativity.png'
     });
@@ -723,8 +694,8 @@ const ContentView: React.FC = () => {
     const [addType, setAddType] = useState<'subfolder' | 'pdf' | 'image' | 'video'>('subfolder');
 
     const classes = ['IX', 'X', 'XI', 'XII', 'XII+'];
-    const streams = ['PCB', 'PCM', 'PCBM', 'Commerce', 'Humanities', 'Science'];
-    const exams = ['JEE', 'NEET', 'CUET', 'NDA', 'CLAT', 'CA Foundation'];
+    const streams = ['PCM', 'PCB', 'PCBM'];
+    const exams = ['JEE', 'CUET', 'NEET'];
 
     const loadSubjects = useCallback(async () => {
         setLoading(true);
@@ -752,9 +723,13 @@ const ContentView: React.FC = () => {
 
     const handleAddSubject = async () => {
         if (!subForm.name || !subForm.code) return alert('Name and Code required');
-        if (!subForm.target_classes || subForm.target_classes.length === 0) return alert('Select at least one class');
+        
+        const hasClasses = subForm.target_classes && subForm.target_classes.length > 0;
+        const hasExams = subForm.target_exams && subForm.target_exams.length > 0;
+        
+        if (!hasClasses && !hasExams) return alert('Target selection mandatory: Select at least one school class or competitive exam');
 
-        const hasHigher = subForm.target_classes.some(c => ['XI', 'XII', 'XII+'].includes(c));
+        const hasHigher = subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c));
 
         if (subForm.category === 'Core') {
             if (hasHigher && (!subForm.target_streams || subForm.target_streams.length === 0)) {
@@ -842,6 +817,10 @@ const ContentView: React.FC = () => {
         setSubForm(s);
         setEditingId(s.id);
         setIsEditing(true);
+        // Determine targetType from metadata
+        const hasExams = s.target_exams && s.target_exams.length > 0;
+        setTargetType(hasExams ? (s.target_exams?.[0] || '') : 'CBSE');
+        setCreationStep(1);
         setIsAdding(true);
     };
 
@@ -935,7 +914,22 @@ const ContentView: React.FC = () => {
                     </div>
                 </div>
                 {view === 'subjects' ? (
-                    <button onClick={() => { setIsEditing(false); setEditingId(null); setSubForm({ name: '', code: '', category: 'Core', target_class: 'XII', target_stream: 'PCM', target_classes: ['XII'], target_streams: ['PCM'], target_exams: [], icon_url: '/assets/subjects/relativity.png' }); setIsAdding(true); }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                    <button onClick={() => { 
+                        setIsEditing(false); 
+                        setEditingId(null); 
+                        setCreationStep(0);
+                        setTargetType('');
+                        setSubForm({ 
+                            name: '', 
+                            code: '', 
+                            category: 'Core', 
+                            target_classes: [], 
+                            target_streams: [], 
+                            target_exams: [], 
+                            icon_url: '' 
+                        }); 
+                        setIsAdding(true); 
+                    }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
                         <Plus size={14} /> New Subject
                     </button>
                 ) : (
@@ -958,6 +952,19 @@ const ContentView: React.FC = () => {
                 </div>
             )}
 
+            {view === 'subjects' && (
+                <div className="relative group">
+                    <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-violet-500 transition-colors" />
+                    <input 
+                        type="text" 
+                        placeholder="Filter subjects by name or reference code..." 
+                        className="w-full bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl pl-11 pr-4 py-3.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 placeholder:text-slate-400/60 focus:bg-white dark:focus:bg-white/[0.05] focus:border-violet-500/50 transition-all outline-none shadow-sm"
+                        value={subSearch}
+                        onChange={e => setSubSearch(e.target.value)}
+                    />
+                </div>
+            )}
+
             {/* Forms Overlay */}
             <AnimatePresence>
                 {isAdding && (
@@ -969,140 +976,169 @@ const ContentView: React.FC = () => {
 
                             {view === 'subjects' ? (
                                 <>
-                                    <div className="space-y-4 max-h-[50vh] overflow-y-auto px-1 custom-scrollbar">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Type</label>
-                                                <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.category} onChange={e => setSubForm({ ...subForm, category: e.target.value as SubjectCategory })}>
-                                                    <option value="Core">Core Subject</option>
-                                                    <option value="Additional">Additional Subject</option>
-                                                </select>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Code</label>
-                                                <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.code} onChange={e => setSubForm({ ...subForm, code: e.target.value })} placeholder="e.g. PHY-042" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Name</label>
-                                            <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.name} onChange={e => setSubForm({ ...subForm, name: e.target.value })} placeholder="e.g. Physics" />
-                                        </div>
-
-                                        {/* Subject Icon Picker - Moved Up for Visibility */}
-                                        <div className="space-y-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
-                                            <label className="text-[9px] font-black uppercase text-violet-500 ml-1 flex items-center gap-1.5"><Star size={10} /> Choose Representation Icon</label>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {SUBJECT_ICONS.map(icon => (
+                                    {!isEditing && creationStep === 0 ? (
+                                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Step 1: Choose Primary Target Context</p>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {['CBSE', 'JEE', 'NEET', 'CUET'].map(target => (
                                                     <button
-                                                        key={icon.id}
-                                                        type="button"
-                                                        onClick={() => setSubForm({ ...subForm, icon_url: icon.url })}
-                                                        className={`relative p-2 rounded-xl border-2 transition-all flex flex-col items-center gap-1.5 ${subForm.icon_url === icon.url ? 'bg-violet-600/10 border-violet-500 shadow-lg scale-105 z-10' : 'bg-white dark:bg-white/5 border-transparent hover:border-violet-200'}`}
+                                                        key={target}
+                                                        onClick={() => {
+                                                            setTargetType(target);
+                                                            setCreationStep(1);
+                                                            if (target !== 'CBSE') {
+                                                                setSubForm({
+                                                                    ...subForm,
+                                                                    category: 'Core',
+                                                                    code: `${target}-MAIN`,
+                                                                    target_exams: [target],
+                                                                    target_classes: ['XI', 'XII', 'XII+']
+                                                                });
+                                                            } else {
+                                                                setSubForm({
+                                                                    ...subForm,
+                                                                    category: 'Core',
+                                                                    code: '',
+                                                                    target_exams: [],
+                                                                    target_classes: []
+                                                                });
+                                                            }
+                                                        }}
+                                                        className="group relative h-32 rounded-2xl border-2 border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] hover:bg-violet-600 hover:border-violet-500 transition-all flex flex-col items-center justify-center gap-3 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-violet-900/40"
                                                     >
-                                                        <img src={icon.url} alt={icon.name} className="w-8 h-8 object-contain" />
-                                                        <span className="text-[7px] font-black uppercase text-center opacity-40">{icon.name}</span>
-                                                        {subForm.icon_url === icon.url && (
-                                                            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center border-2 border-white dark:border-[#0c0c14]">
-                                                                <CheckCircle2 size={8} className="text-white" />
-                                                            </div>
-                                                        )}
+                                                        <div className="text-2xl font-black italic tracking-tighter opacity-20 group-hover:opacity-100 transition-all scale-150 absolute -right-2 -bottom-2 group-hover:scale-110">
+                                                            {target}
+                                                        </div>
+                                                        <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-all">
+                                                            {target === 'CBSE' ? <BookOpen className="text-violet-500 group-hover:text-white" /> : <TrendingUp className="text-violet-500 group-hover:text-white" />}
+                                                        </div>
+                                                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:text-white">{target} FLOW</span>
                                                     </button>
                                                 ))}
                                             </div>
                                         </div>
-
-                                        {/* Target Classes - Multi Select */}
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Linked Classes</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {classes.map(c => {
-                                                    const isSelected = subForm.target_classes?.includes(c);
-                                                    return (
-                                                        <button
-                                                            key={c}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setSubForm(prev => {
-                                                                    const current = prev.target_classes || [];
-                                                                    const next = isSelected ? current.filter((x: string) => x !== c) : [...current, c];
-                                                                    let nextStreams = prev.target_streams || [];
-                                                                    if (!isSelected && (c === 'IX' || c === 'X') && !nextStreams.includes('Science')) {
-                                                                        nextStreams = [...nextStreams, 'Science'];
-                                                                    }
-                                                                    return { ...prev, target_classes: next, target_streams: nextStreams };
-                                                                });
-                                                            }}
-                                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}
-                                                        >
-                                                            {c}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Target Streams - Multi Select (if Core & Class XI or XII selected) */}
-                                        {(subForm.category === 'Core' && subForm.target_classes?.some(c => ['IX', 'X', 'XI', 'XII', 'XII+'].includes(c))) && (
-                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Linked Streams</label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {streams.map(s => {
-                                                        const isSelected = subForm.target_streams?.includes(s);
-                                                        const isLockedScience = s === 'Science' &&
-                                                            (subForm.target_classes?.includes('X') || subForm.target_classes?.includes('IX')) &&
-                                                            !subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c));
-
-                                                        return (
-                                                            <button
-                                                                key={s}
-                                                                type="button"
-                                                                disabled={isLockedScience}
-                                                                onClick={() => {
-                                                                    setSubForm(prev => {
-                                                                        const current = prev.target_streams || [];
-                                                                        const next = isSelected ? current.filter((x: string) => x !== s) : [...current, s];
-                                                                        return { ...prev, target_streams: next };
-                                                                    });
-                                                                }}
-                                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'} ${isLockedScience ? 'cursor-not-allowed opacity-100 bg-cyan-600/30 border-cyan-500/30' : ''}`}
-                                                            >
-                                                                {s}
-                                                                {isLockedScience && <span className="ml-1 text-[8px] opacity-50">(Locked for IX/X)</span>}
-                                                            </button>
-                                                        );
-                                                    })}
+                                    ) : (
+                                        <div className="space-y-5 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                            <div className="flex items-center gap-3 p-3 bg-violet-600/10 border border-violet-500/20 rounded-2xl">
+                                                <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center font-black text-white text-[10px] italic">{targetType || 'META'}</div>
+                                                <div>
+                                                    <h4 className="text-[10px] font-black uppercase text-violet-500 tracking-widest">Selected Context</h4>
+                                                    <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Building for {targetType} Ecosystem</p>
                                                 </div>
+                                                {!isEditing && (
+                                                    <button onClick={() => setCreationStep(0)} className="ml-auto p-2 hover:bg-violet-600/20 rounded-lg transition-all text-violet-500">
+                                                        <XCircle size={14} />
+                                                    </button>
+                                                )}
                                             </div>
-                                        )}
 
-                                        {/* Competitive Exams - Multi Select */}
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Linked Competitive Exams</label>
-                                            <div className="flex flex-wrap gap-2">
-                                                {exams.map(e => {
-                                                    const isSelected = subForm.target_exams?.includes(e);
-                                                    return (
-                                                        <button
-                                                            key={e}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setSubForm(prev => {
-                                                                    const current = prev.target_exams || [];
-                                                                    const next = isSelected ? current.filter((x: string) => x !== e) : [...current, e];
-                                                                    return { ...prev, target_exams: next };
-                                                                });
-                                                            }}
-                                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}
-                                                        >
-                                                            {e}
-                                                        </button>
-                                                    );
-                                                })}
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    {targetType === 'CBSE' && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Type</label>
+                                                            <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.category} onChange={e => setSubForm({ ...subForm, category: e.target.value as SubjectCategory })}>
+                                                                <option value="Core">Core Subject</option>
+                                                                <option value="Additional">Additional Subject</option>
+                                                            </select>
+                                                        </div>
+                                                    )}
+                                                    {targetType === 'CBSE' && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Ref Code</label>
+                                                            <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.code} onChange={e => setSubForm({ ...subForm, code: e.target.value })} placeholder="e.g. MAT-041" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                <div className="space-y-1">
+                                                    <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Display Name</label>
+                                                    <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.name} onChange={e => setSubForm({ ...subForm, name: e.target.value })} placeholder={targetType === 'CBSE' ? "e.g. Physics" : "e.g. JEE Physics Mastery"} />
+                                                </div>
+
+                                                {/* ImgBB Custom Icon Upload */}
+                                                <div className="space-y-3 p-5 bg-slate-900/[0.03] dark:bg-white/[0.03] rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
+                                                    <label className="text-[9px] font-black uppercase text-violet-500 ml-1 flex items-center gap-1.5"><ImageIcon size={10} /> Brand Representation Icon</label>
+                                                    <div className="flex gap-4">
+                                                        <div className="w-16 h-16 rounded-2xl bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner">
+                                                            {subForm.icon_url ? (
+                                                                <img src={subForm.icon_url} alt="Icon" className="w-full h-full object-contain" />
+                                                            ) : (
+                                                                <ImageIcon size={24} className="text-slate-300 dark:text-white/10" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 space-y-2">
+                                                            <div className="relative group cursor-pointer">
+                                                                <input 
+                                                                    type="file" 
+                                                                    accept="image/*"
+                                                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                                    onChange={async (e) => {
+                                                                        const file = e.target.files?.[0];
+                                                                        if (!file) return;
+                                                                        try {
+                                                                            const formData = new FormData();
+                                                                            formData.append('image', file);
+                                                                            const res = await fetch(`https://api.imgbb.com/1/upload?key=af5ca570bb7a1562dae8ef0c7f01a585`, {
+                                                                                method: 'POST',
+                                                                                body: formData
+                                                                            });
+                                                                            const data = await res.json();
+                                                                            if (data.data?.url) setSubForm({ ...subForm, icon_url: data.data.url });
+                                                                        } catch (_) { alert('Icon upload failed'); }
+                                                                    }}
+                                                                />
+                                                                <div className="w-full py-2.5 px-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase text-center text-slate-500 group-hover:border-violet-500 transition-all flex items-center justify-center gap-2">
+                                                                    <UploadCloud size={14} className="text-violet-500" /> Upload New Graphic
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-[8px] italic text-slate-400 px-1">ImgBB Host Enabled. Best size: 512x512 PNG.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {targetType === 'CBSE' && (
+                                                    <>
+                                                        <div className="space-y-2">
+                                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Target Classes</label>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {classes.map(c => {
+                                                                    const isSelected = subForm.target_classes?.includes(c);
+                                                                    return (
+                                                                        <button key={c} type="button" onClick={() => setSubForm(prev => {
+                                                                            const current = prev.target_classes || [];
+                                                                            const next = isSelected ? current.filter((x: string) => x !== c) : [...current, c];
+                                                                            return { ...prev, target_classes: next };
+                                                                        })} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}>{c}</button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+
+                                                        {subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c)) && (
+                                                            <div className="space-y-2">
+                                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Target Streams</label>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {streams.map(s => {
+                                                                        const isSelected = subForm.target_streams?.includes(s);
+                                                                        return (
+                                                                            <button key={s} type="button" onClick={() => setSubForm(prev => {
+                                                                                const current = prev.target_streams || [];
+                                                                                const next = isSelected ? current.filter((x: string) => x !== s) : [...current, s];
+                                                                                return { ...prev, target_streams: next };
+                                                                            })} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}>{s}</button>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
                                             </div>
+
+                                            <button onClick={handleAddSubject} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all mt-4">{isEditing ? 'Sync Content Node' : 'Initialize Subject Hierarchy'}</button>
                                         </div>
-
-                                    </div>
-                                    <button onClick={handleAddSubject} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">{isEditing ? 'Update Subject' : 'Create Subject Folder'}</button>
+                                    )}
                                 </>
                             ) : (
                                 <div className="space-y-4">
@@ -1159,11 +1195,14 @@ const ContentView: React.FC = () => {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
-                        {view === 'subjects' ? (
+                                 {view === 'subjects' ? (
                             subjects.length === 0 ? (
-                                <div className="py-20 text-center text-slate-400 text-xs font-bold">No subjects added. Start with "New Subject".</div>
-                            ) : subjects.map(s => (
-                                <div key={s.id} onClick={() => drillDownSubject(s)} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">Empty Data Store</div>
+                            ) : subjects.filter(s => 
+                                s.name.toLowerCase().includes(subSearch.toLowerCase()) || 
+                                s.code.toLowerCase().includes(subSearch.toLowerCase())
+                            ).map(s => (
+                                <div key={s.id} onClick={() => drillDownSubject(s)} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4 border-transparent hover:border-violet-500">
                                     <div className="flex items-center gap-5">
                                         <div className="w-12 h-12 bg-white/5 dark:bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center p-2 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
                                             <img src={s.icon_url || '/assets/subjects/relativity.png'} className="w-full h-full object-contain filter drop-shadow-sm" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/3426/3426653.png')} />
