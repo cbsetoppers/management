@@ -7,7 +7,7 @@ import {
     Zap, BarChart3, AlertTriangle, CheckCircle2, XCircle, Github,
     RefreshCw, MessageSquare, Crown, Star, Lock, Sun, Moon, BookOpen, Download,
     ShoppingBag, Tag, Package, IndianRupee, Image as ImageIcon,
-    Loader2, UploadCloud
+    Loader2, UploadCloud, Code
 } from 'lucide-react';
 import {
     fetchAdminStats, fetchAllStudents, fetchMaintenanceSettings,
@@ -45,6 +45,30 @@ const ROLE_CONFIG: Record<OperatorRole, { label: string; color: string; bg: stri
         color: 'text-cyan-400',
         bg: 'bg-cyan-400/10 border-cyan-400/20',
         icon: <Shield size={12} />,
+    },
+    supervisor: {
+        label: 'Supervisor',
+        color: 'text-slate-400',
+        bg: 'bg-slate-400/10 border-slate-400/20',
+        icon: <Zap size={12} />,
+    },
+    mentor: {
+        label: 'Mentor',
+        color: 'text-emerald-400',
+        bg: 'bg-emerald-400/10 border-emerald-400/20',
+        icon: <BookOpen size={12} />,
+    },
+    'co-founder': {
+        label: 'Co-Founder',
+        color: 'text-fuchsia-400',
+        bg: 'bg-fuchsia-400/10 border-fuchsia-400/20',
+        icon: <Crown size={12} />,
+    },
+    developer: {
+        label: 'Developer',
+        color: 'text-amber-400',
+        bg: 'bg-amber-400/10 border-amber-400/20',
+        icon: <Code size={12} />,
     },
 };
 

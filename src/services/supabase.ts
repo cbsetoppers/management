@@ -10,7 +10,7 @@ const SUPABASE_ANON_KEY = decode(_K);
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-export type OperatorRole = 'ceo' | 'founder' | 'owner';
+export type OperatorRole = 'ceo' | 'founder' | 'owner' | 'supervisor' | 'mentor' | 'co-founder' | 'developer';
 
 export interface Operator {
     id: string;
@@ -24,7 +24,7 @@ export interface Operator {
 // ─── ADMIN AUTH ─────────────────────────────────────────────────────
 
 export const signInOperator = async (email: string, password: string): Promise<Operator | null> => {
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    const { error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
     });
