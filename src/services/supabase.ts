@@ -108,6 +108,9 @@ export interface StoreProduct {
     name: string;
     description: string;
     image_url: string;
+    image_urls?: string[]; // Multiple photos
+    file_url?: string;     // GDrive URL for purchased users
+    preview_url?: string;  // PDF Preview URL
     mrp: number;
     selling_price: number;
     stock_status: 'In Stock' | 'Out of Stock';
@@ -115,6 +118,7 @@ export interface StoreProduct {
     order_index: number;
     created_at: string;
 }
+
 
 // SUBJECTS
 export const fetchSubjects = async (): Promise<Subject[]> => {

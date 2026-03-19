@@ -1394,11 +1394,15 @@ const StoreView: React.FC = () => {
         name: '',
         description: '',
         image_url: '',
+        image_urls: [],
+        file_url: '',
+        preview_url: '',
         mrp: 0,
         selling_price: 0,
         stock_status: 'In Stock',
         category: 'Study Material',
     });
+
     const [uploading, setUploading] = useState(false);
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1449,7 +1453,8 @@ const StoreView: React.FC = () => {
             setIsAdding(false);
             setIsEditing(false);
             setEditingId(null);
-            setForm({ name: '', description: '', image_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' });
+            setForm({ name: '', description: '', image_url: '', image_urls: [], file_url: '', preview_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' });
+
             loadProducts();
         } catch (e: any) { alert(e.message || 'Error saving product'); }
     };
@@ -1482,7 +1487,8 @@ const StoreView: React.FC = () => {
                     <p className="text-slate-900/30 dark:text-white/30 text-sm font-medium mt-1">Manage physical and digital products for students.</p>
                 </div>
                 <button
-                    onClick={() => { setIsAdding(true); setIsEditing(false); setForm({ name: '', description: '', image_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' }); }}
+                    onClick={() => { setIsAdding(true); setIsEditing(false); setForm({ name: '', description: '', image_url: '', image_urls: [], file_url: '', preview_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' }); }}
+
                     className="flex items-center gap-2 px-5 py-3 bg-violet-600/80 hover:bg-violet-600 border border-violet-500/30 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all active:scale-95 shadow-lg shadow-violet-900/20"
                 >
                     <Plus size={14} /> Add Product
@@ -1617,8 +1623,62 @@ const StoreView: React.FC = () => {
                                         <option value="Out of Stock">Out of Stock</option>
                                     </select>
                                 </div>
+                                
+                                <div className="space-y-4 pt-4 border-t border-slate-900/10 dark:border-white/10">
+                                    <div>
+                                        <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Purchase File URL (GDrive)</label>
+                                        <input
+                                            className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all font-mono"
+                                            placeholder="https://drive.google.com/open?id=..."
+                                            value={form.file_url || ''}
+                                            onChange={e => setForm(p => ({ ...p, file_url: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Preview PDF URL (Optional)</label>
+                                        <input
+                                            className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all font-mono"
+                                            placeholder="https://drive.google.com/file/d/.../preview"
+                                            value={form.preview_url || ''}
+                                            onChange={e => setForm(p => ({ ...p, preview_url: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="col-span-1 md:col-span-2 space-y-4 pt-6 mt-2 border-t border-slate-900/10 dark:border-white/10">
+                                <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Additional Product Photos</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {(form.image_urls || []).map((url, idx) => (
+                                        <div key={idx} className="flex gap-2">
+                                            <input
+                                                className="flex-1 bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-2 text-[10px] font-medium text-slate-900 dark:text-white outline-none"
+                                                value={url}
+                                                placeholder="Photo URL"
+                                                onChange={e => {
+                                                    const next = [...(form.image_urls || [])];
+                                                    next[idx] = e.target.value;
+                                                    setForm({ ...form, image_urls: next });
+                                                }}
+                                            />
+                                            <button onClick={() => {
+                                                const next = (form.image_urls || []).filter((_, i) => i !== idx);
+                                                setForm({ ...form, image_urls: next });
+                                            }} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button 
+                                        onClick={() => setForm({ ...form, image_urls: [...(form.image_urls || []), ''] })}
+                                        className="col-span-1 md:col-span-2 py-3 border border-dashed border-slate-200 dark:border-white/10 rounded-xl text-[9px] font-black uppercase text-slate-400 hover:text-violet-500 hover:border-violet-500/50 transition-all"
+                                    >
+                                        + Add Additional Photo Link
+                                    </button>
+                                </div>
                             </div>
                         </div>
+
 
                         <div className="flex gap-3 mt-8">
                             <button onClick={() => setIsAdding(false)} className="flex-1 py-3 border border-slate-900/10 dark:border-white/10 text-slate-900/40 dark:text-white/40 font-black uppercase text-[10px] tracking-widest rounded-xl hover:border-slate-900/20 dark:hover:border-white/20 hover:text-slate-900/60 dark:hover:text-white/60 transition-all">
