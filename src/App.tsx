@@ -1613,9 +1613,25 @@ const StoreView: React.FC = () => {
                                     />
                                 </div>
                                 <div>
+                                    <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Category</label>
+                                    <select
+                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all appearance-none"
+                                        value={form.category || 'CBSE'}
+                                        onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                                    >
+                                        <option value="CBSE">CBSE</option>
+                                        <option value="ICSE">ICSE</option>
+                                        <option value="JEE">JEE</option>
+                                        <option value="NEET">NEET</option>
+                                        <option value="CUET">CUET</option>
+                                        <option value="PREMIUM">PREMIUM</option>
+                                        <option value="OTHER">OTHER</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="text-[9px] font-black text-slate-900/30 dark:text-white/30 uppercase tracking-widest ml-1 mb-1.5 block">Availability</label>
                                     <select
-                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all"
+                                        className="w-full bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all appearance-none"
                                         value={form.stock_status}
                                         onChange={e => setForm(p => ({ ...p, stock_status: e.target.value as any }))}
                                     >
@@ -1707,9 +1723,9 @@ const StoreView: React.FC = () => {
                             key={p.id}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl overflow-hidden group hover:border-violet-500/30 transition-all shadow-sm hover:shadow-xl hover:shadow-violet-900/5"
+                            className="bg-white dark:bg-[#0A0A16] border border-slate-900/[0.06] dark:border-white/[0.05] rounded-3xl overflow-hidden group hover:border-violet-500/30 transition-all shadow-sm hover:shadow-2xl hover:shadow-violet-900/10"
                         >
-                            <div className="aspect-[4/3] bg-slate-100 dark:bg-white/[0.03] relative overflow-hidden">
+                            <div className="aspect-[16/10] bg-slate-100 dark:bg-white/[0.02] relative overflow-hidden">
                                 {p.image_url ? (
                                     <img src={p.image_url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.name} />
                                 ) : (
@@ -1717,40 +1733,47 @@ const StoreView: React.FC = () => {
                                         <ImageIcon size={48} />
                                     </div>
                                 )}
-                                <div className="absolute top-3 left-3 flex gap-2">
-                                    <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock_status === 'In Stock' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                                    <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest backdrop-blur-md ${p.stock_status === 'In Stock' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
                                         {p.stock_status}
                                     </span>
                                     {p.category && (
-                                        <span className="px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-lg text-[8px] font-black uppercase tracking-widest">
+                                        <span className="px-2.5 py-1 bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full text-[8px] font-black uppercase tracking-widest backdrop-blur-md">
                                             {p.category}
                                         </span>
                                     )}
                                 </div>
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                    <button onClick={() => startEdit(p)} className="p-3 bg-white text-black rounded-xl hover:bg-violet-500 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300"><Pencil size={18} /></button>
-                                    <button onClick={() => handleDelete(p.id)} className="p-3 bg-white text-black rounded-xl hover:bg-red-500 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75"><Trash2 size={18} /></button>
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3">
+                                    <button onClick={() => startEdit(p)} className="p-4 bg-white text-black rounded-2xl hover:bg-violet-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-500 shadow-xl active:scale-90"><Pencil size={20} /></button>
+                                    <button onClick={() => handleDelete(p.id)} className="p-4 bg-white text-black rounded-2xl hover:bg-red-600 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 duration-500 delay-75 shadow-xl active:scale-90"><Trash2 size={20} /></button>
                                 </div>
                             </div>
-                            <div className="p-5">
-                                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">{p.name}</h3>
-                                <p className="text-[10px] text-slate-900/30 dark:text-white/30 mt-1 line-clamp-2 min-h-[30px]">{p.description || 'No description provided.'}</p>
-                                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-900/5 dark:border-white/5">
+                            <div className="p-6">
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-2 flex-1 mr-2">{p.name}</h3>
+                                    <div className="w-8 h-8 rounded-xl bg-violet-600/10 text-violet-400 flex items-center justify-center shrink-0">
+                                        <ShoppingBag size={14} />
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-slate-500 dark:text-white/30 line-clamp-2 min-h-[30px] leading-relaxed mb-4">{p.description || 'No description provided.'}</p>
+                                <div className="flex items-center justify-between pt-4 border-t border-slate-900/5 dark:border-white/5">
                                     <div className="flex flex-col">
-                                        <span className="text-[8px] text-slate-900/30 dark:text-white/30 uppercase font-black tracking-widest">Price</span>
+                                        <span className="text-[8px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest mb-1">Pricing</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-lg font-black text-violet-400">₹{p.selling_price}</span>
+                                            <span className="text-xl font-black text-violet-500 dark:text-violet-400">₹{p.selling_price}</span>
                                             {p.mrp > p.selling_price && (
-                                                <span className="text-[10px] text-slate-900/20 dark:text-white/20 line-through">₹{p.mrp}</span>
+                                                <span className="text-[10px] text-slate-400 dark:text-white/20 line-through font-bold">₹{p.mrp}</span>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="w-8 h-8 rounded-lg bg-violet-600/10 text-violet-400 flex items-center justify-center">
-                                        <ShoppingBag size={14} />
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[8px] text-slate-400 dark:text-white/20 uppercase font-black tracking-widest mb-1">Orders</span>
+                                        <span className="text-xs font-black text-slate-600 dark:text-white/60">0 Sold</span>
                                     </div>
                                 </div>
                             </div>
                         </motion.div>
+
                     ))
                 )}
             </div>
