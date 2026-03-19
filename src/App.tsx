@@ -650,6 +650,9 @@ const ContentView: React.FC = () => {
     const [materials, setMaterials] = useState<Material[]>([]);
     const [downloading, setDownloading] = useState<string | null>(null);
     const [subSearch, setSubSearch] = useState('');
+    const [filterClass, setFilterClass] = useState('');
+    const [filterStream, setFilterStream] = useState('');
+    const [filterExam, setFilterExam] = useState('');
     const [creationStep, setCreationStep] = useState(0); // 0: Select Target, 1: Form
     const [targetType, setTargetType] = useState<string>(''); // 'JEE', 'CUET', 'NEET', 'CBSE'
 
@@ -953,15 +956,48 @@ const ContentView: React.FC = () => {
             )}
 
             {view === 'subjects' && (
-                <div className="relative group">
-                    <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-violet-500 transition-colors" />
-                    <input 
-                        type="text" 
-                        placeholder="Filter subjects by name or reference code..." 
-                        className="w-full bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl pl-11 pr-4 py-3.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 placeholder:text-slate-400/60 focus:bg-white dark:focus:bg-white/[0.05] focus:border-violet-500/50 transition-all outline-none shadow-sm"
-                        value={subSearch}
-                        onChange={e => setSubSearch(e.target.value)}
-                    />
+                <div className="space-y-4">
+                    <div className="relative group">
+                        <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-violet-500 transition-colors" />
+                        <input 
+                            type="text" 
+                            placeholder="Filter subjects by name or reference code..." 
+                            className="w-full bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl pl-11 pr-4 py-3.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 placeholder:text-slate-400/60 focus:bg-white dark:focus:bg-white/[0.05] focus:border-violet-500/50 transition-all outline-none shadow-sm"
+                            value={subSearch}
+                            onChange={e => setSubSearch(e.target.value)}
+                        />
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-xl">
+                            <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest border-r border-slate-400/20 pr-1.5 mr-0.5 whitespace-nowrap">Filter</label>
+                            
+                            <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
+                                <option value="" className="bg-slate-900 text-white">Class: All</option>
+                                {['IX', 'X', 'XI', 'XII', 'XII+'].map(c => <option key={c} value={c} className="bg-slate-900 text-white">{c}</option>)}
+                            </select>
+
+                            <span className="w-1 h-1 rounded-full bg-slate-400/20 mx-1.5"></span>
+
+                            <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterStream} onChange={e => setFilterStream(e.target.value)}>
+                                <option value="" className="bg-slate-900 text-white">Stream: All</option>
+                                {streams.map(s => <option key={s} value={s} className="bg-slate-900 text-white">{s}</option>)}
+                            </select>
+                            
+                            <span className="w-1 h-1 rounded-full bg-slate-400/20 mx-1.5"></span>
+
+                            <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterExam} onChange={e => setFilterExam(e.target.value)}>
+                                <option value="" className="bg-slate-900 text-white">Exam: All</option>
+                                {exams.map(ex => <option key={ex} value={ex} className="bg-slate-900 text-white">{ex}</option>)}
+                            </select>
+                        </div>
+                        
+                        {(filterClass || filterStream || filterExam || subSearch) && (
+                            <button onClick={() => { setFilterClass(''); setFilterStream(''); setFilterExam(''); setSubSearch(''); }} className="px-3 py-1.5 text-[9px] font-black uppercase text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-1.5">
+                                <RefreshCw size={10} /> Reset
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -1198,10 +1234,16 @@ const ContentView: React.FC = () => {
                                  {view === 'subjects' ? (
                             subjects.length === 0 ? (
                                 <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">Empty Data Store</div>
-                            ) : subjects.filter(s => 
-                                s.name.toLowerCase().includes(subSearch.toLowerCase()) || 
-                                s.code.toLowerCase().includes(subSearch.toLowerCase())
-                            ).map(s => (
+                            ) : subjects.filter(s => {
+                                const name = s.name.toLowerCase();
+                                const code = s.code.toLowerCase();
+                                const query = subSearch.toLowerCase();
+                                const matchesSearch = name.includes(query) || code.includes(query);
+                                const matchesClass = !filterClass || s.target_classes?.includes(filterClass);
+                                const matchesStream = !filterStream || s.target_streams?.includes(filterStream);
+                                const matchesExam = !filterExam || s.target_exams?.includes(filterExam);
+                                return matchesSearch && matchesClass && matchesStream && matchesExam;
+                            }).map(s => (
                                 <div key={s.id} onClick={() => drillDownSubject(s)} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4 border-transparent hover:border-violet-500">
                                     <div className="flex items-center gap-5">
                                         <div className="w-12 h-12 bg-white/5 dark:bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center p-2 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
