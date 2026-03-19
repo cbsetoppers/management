@@ -1400,7 +1400,7 @@ const StoreView: React.FC = () => {
         mrp: 0,
         selling_price: 0,
         stock_status: 'In Stock',
-        category: 'Study Material',
+        category: 'CBSE',
     });
 
     const [uploadingIdx, setUploadingIdx] = useState<number | 'main' | null>(null);
@@ -1459,7 +1459,7 @@ const StoreView: React.FC = () => {
             setIsAdding(false);
             setIsEditing(false);
             setEditingId(null);
-            setForm({ name: '', description: '', image_url: '', image_urls: [], file_url: '', preview_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' });
+            setForm({ name: '', description: '', image_url: '', image_urls: [], file_url: '', preview_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'CBSE' });
 
             loadProducts();
         } catch (e: any) { alert(e.message || 'Error saving product'); }
@@ -1493,7 +1493,7 @@ const StoreView: React.FC = () => {
                     <p className="text-slate-900/30 dark:text-white/30 text-sm font-medium mt-1">Manage physical and digital products for students.</p>
                 </div>
                 <button
-                    onClick={() => { setIsAdding(true); setIsEditing(false); setForm({ name: '', description: '', image_url: '', image_urls: [], file_url: '', preview_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'Study Material' }); }}
+                    onClick={() => { setIsAdding(true); setIsEditing(false); setForm({ name: '', description: '', image_url: '', image_urls: [], file_url: '', preview_url: '', mrp: 0, selling_price: 0, stock_status: 'In Stock', category: 'CBSE' }); }}
 
                     className="flex items-center gap-2 px-5 py-3 bg-violet-600/80 hover:bg-violet-600 border border-violet-500/30 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all active:scale-95 shadow-lg shadow-violet-900/20"
                 >
