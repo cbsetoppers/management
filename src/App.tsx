@@ -19,10 +19,11 @@ import {
     fetchMaterials, createMaterial, deleteMaterial, updateMaterial,
     fetchStoreProducts, createStoreProduct, deleteStoreProduct, updateStoreProduct,
     fetchStoreBanners, createStoreBanner, deleteStoreBanner,
-    Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct, StoreBanner
+    fetchSubscriptionPlans, updateSubscriptionPlan,
+    Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct, StoreBanner, SubscriptionPlan
 } from './services/supabase';
 
-type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators' | 'store';
+type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators' | 'store' | 'subscriptions';
 
 const LOGO_URL = "https://i.ibb.co/vC4MYFFk/1770137585956.png";
 
@@ -2027,6 +2028,156 @@ const StoreView: React.FC = () => {
     );
 };
 
+const SubscriptionManager: React.FC = () => {
+    const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<any>(null);
+    const [editing, setEditing] = useState<SubscriptionPlan | null>(null);
+
+    const load = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchSubscriptionPlans();
+            setPlans(data);
+        } catch (_) { }
+        setLoading(false);
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editing) return;
+        try {
+            await updateSubscriptionPlan(editing.id, editing);
+            setEditing(null);
+            load();
+        } catch (_) { }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center mb-10">
+                <div className="space-y-1">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">SUBSCRIPTION DECK</h2>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-[0.3em] flex items-center gap-2">
+                        <Crown size={10} className="text-violet-500" />
+                        Dynamic Revenue Control
+                    </p>
+                </div>
+                <button
+                    onClick={load}
+                    className="p-3 bg-slate-100 dark:bg-white/5 rounded-2xl hover:bg-slate-200 dark:hover:bg-white/10 transition-all active:scale-95 group"
+                >
+                    <RefreshCw size={20} className={`${loading ? 'animate-spin' : ''} text-slate-600 dark:text-white/40 group-hover:text-violet-500`} />
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {plans.map((p, idx) => (
+                    <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="bg-white dark:bg-[#0a0a18] p-8 rounded-[40px] border border-slate-900/[0.06] dark:border-white/[0.06] relative overflow-hidden group hover:shadow-2xl hover:shadow-violet-500/5 transition-all"
+                    >
+                        <div className={`absolute top-0 right-0 w-32 h-32 blur-[100px] opacity-20 ${p.name.includes('elite') ? 'bg-amber-400' : (p.name.includes('pro') ? 'bg-violet-400' : 'bg-blue-400')}`} />
+                        
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-8">
+                                <div className={`p-4 rounded-3xl ${p.name.includes('elite') ? 'bg-amber-400/10 text-amber-400' : (p.name.includes('pro') ? 'bg-violet-400/10 text-violet-400' : 'bg-blue-400/10 text-blue-400')}`}>
+                                    {p.name.includes('elite') ? <Crown size={28} /> : (p.name.includes('pro') ? <Star size={28} /> : <Zap size={28} />)}
+                                </div>
+                                <button
+                                    onClick={() => setEditing(p)}
+                                    className="p-2.5 bg-slate-900/5 dark:bg-white/5 rounded-2xl hover:bg-slate-900/10 dark:hover:bg-white/10 transition-colors"
+                                >
+                                    <Pencil size={18} />
+                                </button>
+                            </div>
+
+                            <h3 className="text-xl font-black uppercase tracking-tight mb-4">{p.name}</h3>
+
+                            <div className="space-y-3 mb-10">
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">Monthly</p>
+                                    <p className="text-3xl font-black text-slate-900 dark:text-white">₹{p.price_monthly}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">Quarterly</p>
+                                        <p className="text-base font-black text-slate-900 dark:text-white">₹{p.price_quarterly}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest">Yearly</p>
+                                        <p className="text-base font-black text-slate-900 dark:text-white">₹{p.price_yearly}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-6 border-t border-slate-900/[0.06] dark:border-white/[0.06]">
+                                {p.features.map((f, i) => (
+                                    <div key={i} className="flex items-center gap-3 text-xs font-bold text-slate-500 dark:text-white/40">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                                        <span>{f}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            <AnimatePresence>
+                {editing && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setEditing(null)} />
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="relative w-full max-w-xl bg-white dark:bg-[#070712] rounded-[50px] border border-white/10 shadow-3xl overflow-hidden">
+                            <div className="p-12">
+                                <div className="flex items-center gap-4 mb-10">
+                                    <div className="w-12 h-12 bg-violet-500/10 rounded-2xl flex items-center justify-center text-violet-500">
+                                        <Crown size={24} />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">SYNC {editing.name}</h2>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Live Pricing Core</p>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleUpdate} className="space-y-8">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] uppercase font-black text-slate-400/60 tracking-widest ml-1">Monthly (₹)</label>
+                                            <input type="number" value={editing.price_monthly} onChange={e => setEditing({ ...editing, price_monthly: +e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 border-2 border-transparent focus:border-violet-500/30 transition-all rounded-3xl px-6 py-4 text-sm font-black outline-none" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] uppercase font-black text-slate-400/60 tracking-widest ml-1">Quarterly (₹)</label>
+                                            <input type="number" value={editing.price_quarterly} onChange={e => setEditing({ ...editing, price_quarterly: +e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 border-2 border-transparent focus:border-violet-500/30 transition-all rounded-3xl px-6 py-4 text-sm font-black outline-none" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] uppercase font-black text-slate-400/60 tracking-widest ml-1">Yearly (₹)</label>
+                                            <input type="number" value={editing.price_yearly} onChange={e => setEditing({ ...editing, price_yearly: +e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 border-2 border-transparent focus:border-violet-500/30 transition-all rounded-3xl px-6 py-4 text-sm font-black outline-none" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] uppercase font-black text-slate-400/60 tracking-widest ml-1">Core Features (CSV)</label>
+                                        <textarea value={editing.features.join(', ')} onChange={e => setEditing({ ...editing, features: e.target.value.split(',').map(s => s.trim()) })} className="w-full bg-slate-100 dark:bg-white/5 border-2 border-transparent focus:border-violet-500/30 transition-all rounded-[32px] px-6 py-4 text-sm font-black h-40 outline-none resize-none" />
+                                    </div>
+                                    <div className="flex gap-4 pt-4">
+                                        <button type="button" onClick={() => setEditing(null)} className="flex-1 py-5 font-black uppercase tracking-[0.2em] text-[10px] bg-slate-100 dark:bg-white/5 rounded-3xl active:scale-95 transition-all">Abort Sync</button>
+                                        <button type="submit" className="flex-2 py-5 font-black uppercase tracking-[0.2em] text-[10px] bg-violet-500 text-white rounded-3xl shadow-2xl shadow-violet-500/40 active:scale-95 transition-all">Update Live Pricing</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 // ─────────────────────────────────────────────────────────────────────
 // MAIN APP
 // ─────────────────────────────────────────────────────────────────────
@@ -2100,6 +2251,7 @@ const AdminApp: React.FC = () => {
         { id: 'students', icon: <Users size={16} />, label: 'Students' },
         { id: 'operators', icon: <Shield size={16} />, label: 'Operators' },
         { id: 'store', icon: <ShoppingBag size={16} />, label: 'Toppers Store' },
+        { id: 'subscriptions', icon: <Crown size={16} />, label: 'Subscriptions' },
         { id: 'content', icon: <BookOpen size={16} />, label: 'Content Manager' },
         { id: 'settings', icon: <Settings size={16} />, label: 'Settings' },
     ];
@@ -2236,6 +2388,7 @@ const AdminApp: React.FC = () => {
                             {view === 'students' && <StudentsView students={students} loading={loading} />}
                             {view === 'operators' && <OperatorsView currentOperator={operator} />}
                             {view === 'store' && <StoreView />}
+                            {view === 'subscriptions' && <SubscriptionManager />}
                             {view === 'content' && <ContentView />}
                             {view === 'settings' && <SettingsView />}
                         </motion.div>

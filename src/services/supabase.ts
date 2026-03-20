@@ -277,3 +277,29 @@ export const updateMaintenanceSettings = async (settings: any) => {
     if (error) throw error;
     return data;
 };
+export interface SubscriptionPlan {
+    id: string;
+    name: string;
+    price_monthly: number;
+    price_quarterly: number;
+    price_yearly: number;
+    features: string[];
+    is_featured: boolean;
+}
+
+export const fetchSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
+    const { data, error } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .order('price_monthly', { ascending: true });
+    if (error) throw error;
+    return data || [];
+};
+
+export const updateSubscriptionPlan = async (id: string, updates: Partial<SubscriptionPlan>) => {
+    const { error } = await supabase
+        .from('subscription_plans')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id);
+    if (error) throw error;
+};
