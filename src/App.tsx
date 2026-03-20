@@ -2,23 +2,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, Users, Settings, LogOut, Search,
-    ShieldAlert, Calendar, Clock, TrendingUp, Activity,
+    ShieldAlert, Calendar, TrendingUp, Activity,
     Shield, Plus, Trash2, Pencil, Eye, EyeOff, ChevronRight, ChevronUp, ChevronDown,
-    Zap, BarChart3, AlertTriangle, CheckCircle2, XCircle, Github,
+    Zap, BarChart3, CheckCircle2, XCircle, Github,
     RefreshCw, MessageSquare, Crown, Star, Lock, Sun, Moon, BookOpen, Download,
-    ShoppingBag, Tag, Package, IndianRupee, Image as ImageIcon,
+    ShoppingBag, Package, Image as ImageIcon,
     Loader2, UploadCloud, Code
 } from 'lucide-react';
 import {
     fetchAdminStats, fetchAllStudents, fetchMaintenanceSettings,
-    updateMaintenanceSettings, supabase, signInOperator, signOutOperator,
+    updateMaintenanceSettings, signInOperator, signOutOperator,
     fetchAllOperators, createOperator, deleteOperator,
     Operator, OperatorRole,
     fetchSubjects, createSubject, deleteSubject, updateSubject,
     fetchFolders, createFolder, deleteFolder, updateFolder,
     fetchMaterials, createMaterial, deleteMaterial, updateMaterial,
     fetchStoreProducts, createStoreProduct, deleteStoreProduct, updateStoreProduct,
-    Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct
+    fetchStoreBanners, createStoreBanner, deleteStoreBanner,
+    Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct, StoreBanner
 } from './services/supabase';
 
 type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators' | 'store';
@@ -1052,7 +1053,7 @@ const ContentView: React.FC = () => {
                                                                     category: 'Core',
                                                                     code: `${target}-MAIN`,
                                                                     target_exams: [target],
-                                                                    target_classes: ['XI', 'XII', 'XII+']
+                                                                    target_classes: []  // Competitive exams only appear in exam sections, not in class sections
                                                                 });
                                                             } else {
                                                                 setSubForm({
@@ -1485,6 +1486,106 @@ const SettingsView: React.FC = () => {
 };
 
 // ─────────────────────────────────────────────────────────────────────
+// BANNER MANAGER
+// ─────────────────────────────────────────────────────────────────────
+const BannerManager: React.FC = () => {
+    const [banners, setBanners] = useState<StoreBanner[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [url, setUrl] = useState('');
+    const [uploading, setUploading] = useState(false);
+
+    const loadBanners = async () => {
+        setLoading(true);
+        try { const data = await fetchStoreBanners(); setBanners(data); } catch (_) { }
+        setLoading(false);
+    };
+
+    useEffect(() => { loadBanners(); }, []);
+
+    const handleAdd = async () => {
+        if (!url) return;
+        try {
+            await createStoreBanner({ image_url: url, order_index: banners.length });
+            setUrl('');
+            loadBanners();
+        } catch (e: any) { alert(e.message); }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Delete this banner?')) return;
+        try { await deleteStoreBanner(id); loadBanners(); } catch (_) { alert('Error deleting banner'); }
+    };
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        const fd = new FormData();
+        fd.append('image', file);
+        try {
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=af5ca570bb7a1562dae8ef0c7f01a585`, { method: 'POST', body: fd });
+            const result = await res.json();
+            if (result.success) setUrl(result.data.url);
+        } catch (_) { }
+        setUploading(false);
+    };
+
+    return (
+        <div className="bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl p-6 space-y-4 mb-8">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <ImageIcon size={18} className="text-violet-400" />
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Store Promotional Banners</h3>
+                </div>
+                <p className="text-[10px] text-slate-900/30 dark:text-white/30 font-bold uppercase tracking-widest">Auto-looping Slide Show</p>
+            </div>
+
+            <div className="flex gap-3">
+                <input
+                    className="flex-1 bg-slate-900/[0.05] dark:bg-white/[0.05] border border-slate-900/[0.08] dark:border-white/[0.08] rounded-xl px-4 py-3 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500/50 transition-all font-mono"
+                    placeholder="Enter Banner Image URL..."
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                />
+                <label className="shrink-0">
+                    <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
+                    <div className="h-[46px] px-4 rounded-xl border border-dashed border-violet-500/30 flex items-center justify-center cursor-pointer hover:bg-violet-600/5 text-violet-400">
+                        {uploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+                    </div>
+                </label>
+                <button
+                    onClick={handleAdd}
+                    className="px-6 py-3 bg-violet-600 border border-violet-500/30 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                    disabled={!url || uploading}
+                >
+                    Add
+                </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {banners.map(b => (
+                    <div key={b.id} className="group relative rounded-xl overflow-hidden aspect-[16/9] border border-slate-900/10 dark:border-white/10 shadow-sm transition-all hover:scale-[1.02] bg-slate-900/10">
+                        <img src={b.image_url} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button onClick={() => handleDelete(b.id)} className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all scale-75 group-hover:scale-100">
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    </div>
+                ))}
+                {loading && [1, 2, 3].map(i => <div key={i} className="aspect-[16/9] bg-slate-100 dark:bg-white/5 animate-pulse rounded-xl" />)}
+                {!loading && banners.length === 0 && (
+                    <div className="col-span-full py-8 border border-dashed border-slate-900/10 dark:border-white/10 rounded-xl flex flex-col items-center justify-center text-slate-400">
+                        <ImageIcon size={24} className="opacity-20 mb-2" />
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40">No Banners Added</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// ─────────────────────────────────────────────────────────────────────
 // STORE VIEW
 // ─────────────────────────────────────────────────────────────────────
 const StoreView: React.FC = () => {
@@ -1605,6 +1706,8 @@ const StoreView: React.FC = () => {
                     <Plus size={14} /> Add Product
                 </button>
             </div>
+
+            <BannerManager />
 
             <div className="relative w-full">
                 <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900/25 dark:text-white/25" />
@@ -1730,8 +1833,7 @@ const StoreView: React.FC = () => {
                                         value={form.category || 'CBSE'}
                                         onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
                                     >
-                                        <option value="CBSE">CBSE</option>
-                                        <option value="ICSE">ICSE</option>
+                                          <option value="CBSE">CBSE</option>
                                         <option value="JEE">JEE</option>
                                         <option value="NEET">NEET</option>
                                         <option value="CUET">CUET</option>

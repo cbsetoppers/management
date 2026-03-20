@@ -221,6 +221,30 @@ export const updateStoreProduct = async (id: string, updates: Partial<StoreProdu
     return data;
 };
 
+// STORE BANNERS
+export interface StoreBanner {
+    id: string;
+    image_url: string;
+    order_index: number;
+    created_at: string;
+}
+
+export const fetchStoreBanners = async (): Promise<StoreBanner[]> => {
+    const { data, error } = await supabase.from('store_banners').select('*').order('order_index');
+    if (error) throw error;
+    return data || [];
+};
+
+export const createStoreBanner = async (banner: Partial<StoreBanner>) => {
+    const { data, error } = await supabase.from('store_banners').insert([banner]).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const deleteStoreBanner = async (id: string) => {
+    await supabase.from('store_banners').delete().eq('id', id);
+};
+
 // ─── ANALYTICS (DASHBOARD) ───────────────────────────────────────────
 
 export const fetchAdminStats = async () => {
