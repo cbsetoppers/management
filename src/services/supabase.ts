@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { decode } from '../utils/crypto';
+import { decryptStudent, encryptMaterial, decryptMaterial } from './cryptoService';
 
 // High-security obfuscated DBMS secrets
 const _U = "b2MuZXNhYmFwdXMubWhvc2Fwb3Z4Y3ZtZGZ6aGtka2gvLzpzcHR0aA==";
@@ -179,13 +180,13 @@ export const fetchMaterials = async (subjectId: string, folderId: string | null 
 
     const { data, error } = await query.order('order_index');
     if (error) throw error;
-    return data || [];
+    return (data || []).map(decryptMaterial);
 };
 
 export const createMaterial = async (material: Partial<Material>) => {
-    const { data, error } = await supabase.from('materials').insert([material]).select().single();
+    const { data, error } = await supabase.from('materials').insert([encryptMaterial(material)]).select().single();
     if (error) throw error;
-    return data;
+    return decryptMaterial(data);
 };
 
 export const deleteMaterial = async (id: string) => {
@@ -193,9 +194,9 @@ export const deleteMaterial = async (id: string) => {
 };
 
 export const updateMaterial = async (id: string, updates: Partial<Material>) => {
-    const { data, error } = await supabase.from('materials').update(updates).eq('id', id).select().single();
+    const { data, error } = await supabase.from('materials').update(encryptMaterial(updates)).eq('id', id).select().single();
     if (error) throw error;
-    return data;
+    return decryptMaterial(data);
 };
 
 // STORE PRODUCTS
@@ -262,7 +263,7 @@ export const fetchAdminStats = async () => {
 export const fetchAllStudents = async () => {
     const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    return (data || []).map(decryptStudent);
 };
 
 export const fetchMaintenanceSettings = async () => {
