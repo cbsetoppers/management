@@ -1,14 +1,15 @@
 import CryptoJS from 'crypto-js';
 
-const SECRET_KEY = 'CBSETOPPERS_V2_SECURE_VAULT_KEY_2026';
-const STATIC_IV = CryptoJS.enc.Utf8.parse('CBSETOPPERS_STATIC_IV123'); // 16 bytes
+// MUST match crypto_service.dart in Flutter exactly!
+const SECRET_KEY = CryptoJS.enc.Utf8.parse('CBSE_TOPPERS_V2_SECURE_KEY_AES32'); // exactly 32 chars
+const STATIC_IV = CryptoJS.enc.Utf8.parse('CBSETOPPERS_IV16'); // exactly 16 chars
 
 export const decryptString = (encryptedBase64: string | null | undefined): string => {
     if (!encryptedBase64 || typeof encryptedBase64 !== 'string' || !encryptedBase64.endsWith('=')) {
         return encryptedBase64 || '';
     }
     try {
-        const bytes = CryptoJS.AES.decrypt(encryptedBase64, CryptoJS.enc.Utf8.parse(SECRET_KEY), {
+        const bytes = CryptoJS.AES.decrypt(encryptedBase64, SECRET_KEY, {
             iv: STATIC_IV,
             mode: CryptoJS.mode.CBC,
             padding: CryptoJS.pad.Pkcs7
@@ -22,7 +23,7 @@ export const decryptString = (encryptedBase64: string | null | undefined): strin
 
 export const encryptString = (plainText: string | null | undefined): string => {
     if (!plainText) return plainText || '';
-    const bytes = CryptoJS.AES.encrypt(plainText, CryptoJS.enc.Utf8.parse(SECRET_KEY), {
+    const bytes = CryptoJS.AES.encrypt(plainText, SECRET_KEY, {
         iv: STATIC_IV,
         mode: CryptoJS.mode.CBC,
         padding: CryptoJS.pad.Pkcs7
