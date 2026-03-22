@@ -7,7 +7,7 @@ import {
     Zap, BarChart3, CheckCircle2, XCircle, Github,
     RefreshCw, MessageSquare, Crown, Star, Lock, Sun, Moon, BookOpen, Download,
     ShoppingBag, Package, Image as ImageIcon,
-    Loader2, UploadCloud, Code
+    Loader2, UploadCloud, Code, Book, Medal, FolderOpen
 } from 'lucide-react';
 import {
     fetchAdminStats, fetchAllStudents, fetchMaintenanceSettings,
@@ -20,6 +20,10 @@ import {
     fetchStoreProducts, createStoreProduct, deleteStoreProduct, updateStoreProduct,
     fetchStoreBanners, createStoreBanner, deleteStoreBanner,
     fetchSubscriptionPlans, updateSubscriptionPlan,
+    fetchClasses, addClass, deleteClass, 
+    fetchExams, addExam, deleteExam,
+    fetchStreams, addStream, deleteStream,
+    fetchClassStreams, linkStreamToClass, unlinkStreamFromClass,
     Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct, StoreBanner, SubscriptionPlan
 } from './services/supabase';
 
@@ -675,12 +679,16 @@ const ContentView: React.FC = () => {
     const [folders, setFolders] = useState<Folder[]>([]);
     const [materials, setMaterials] = useState<Material[]>([]);
     const [downloading, setDownloading] = useState<string | null>(null);
+    const [navLevel, setNavLevel] = useState<'root' | 'classes' | 'streams' | 'sections' | 'exams' | 'exam-sections' | 'content'>('root');
+    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+    const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
+    const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
     const [subSearch, setSubSearch] = useState('');
     const [filterClass, setFilterClass] = useState('');
     const [filterStream, setFilterStream] = useState('');
     const [filterExam, setFilterExam] = useState('');
-    const [creationStep, setCreationStep] = useState(0); // 0: Select Target, 1: Form
-    const [targetType, setTargetType] = useState<string>(''); // 'JEE', 'CUET', 'NEET', 'CBSE'
+    const [creationStep, setCreationStep] = useState(0); 
+    const [targetType, setTargetType] = useState<string>(''); 
 
     const handleDownload = async (url: string, title: string) => {
         if (downloading) return;
@@ -712,7 +720,7 @@ const ContentView: React.FC = () => {
 
     // Form states
     const [subForm, setSubForm] = useState<Partial<Subject>>({
-        category: 'Core',
+        tag: '',
         target_classes: [],
         target_streams: [],
         target_exams: [],
@@ -722,15 +730,26 @@ const ContentView: React.FC = () => {
     const [materialForm, setMaterialForm] = useState<Partial<Material>>({ type: 'pdf', title: '', url: '' });
     const [addType, setAddType] = useState<'subfolder' | 'pdf' | 'image' | 'video'>('subfolder');
 
-    const classes = ['IX', 'X', 'XI', 'XII', 'XII+'];
-    const streams = ['PCM', 'PCB', 'PCBM'];
-    const exams = ['JEE', 'CUET', 'NEET'];
+    const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+    const [exams, setExams] = useState<{ id: string; name: string }[]>([]);
+    const [streams, setStreams] = useState<{ id: string; name: string }[]>([]);
+    const [classStreams, setClassStreams] = useState<{ class_id: string; stream_id: string }[]>([]);
 
     const loadSubjects = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchSubjects();
+            const [data, clsData, exmData, stmData, mapData] = await Promise.all([
+                fetchSubjects(),
+                fetchClasses(),
+                fetchExams(),
+                fetchStreams(),
+                fetchClassStreams()
+            ]);
             setSubjects(data);
+            setClasses(clsData);
+            setExams(exmData);
+            setStreams(stmData);
+            setClassStreams(mapData);
         } catch (_) { }
         setLoading(false);
     }, []);
@@ -758,19 +777,7 @@ const ContentView: React.FC = () => {
         
         if (!hasClasses && !hasExams) return alert('Target selection mandatory: Select at least one school class or competitive exam');
 
-        const hasHigher = subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c));
-
-        if (subForm.category === 'Core' && !hasExams) {
-            if (hasHigher && (!subForm.target_streams || subForm.target_streams.length === 0)) {
-                return alert('Stream is mandatory for Class XI/XII Core subjects');
-            }
-        }
-
         const finalData = { ...subForm };
-        if (subForm.category === 'Additional') {
-            finalData.target_stream = undefined;
-            finalData.target_streams = [];
-        }
 
         try {
             if (isEditing && editingId) {
@@ -929,7 +936,14 @@ const ContentView: React.FC = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-                        {view === 'subjects' ? 'Subjects Portal' : currentSubject?.name}
+                        {view === 'subjects' ? 'Subjects Portal' : (
+                            <div className="flex items-center gap-3">
+                                <span>{currentSubject?.name}</span>
+                                {currentSubject?.tag && (
+                                    <span className="text-[9px] px-2 py-0.5 bg-violet-500/10 text-violet-500 rounded font-black uppercase tracking-widest">{currentSubject.tag}</span>
+                                )}
+                            </div>
+                        )}
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
                         {view === 'folders' && (
@@ -946,17 +960,19 @@ const ContentView: React.FC = () => {
                     <button onClick={() => { 
                         setIsEditing(false); 
                         setEditingId(null); 
-                        setCreationStep(0);
-                        setTargetType('');
+                        const clsName = classes.find(c => c.id === selectedClassId)?.name;
+                        const stmName = streams.find(st => st.id === selectedStreamId)?.name;
                         setSubForm({ 
                             name: '', 
                             code: '', 
-                            category: 'Core', 
-                            target_classes: [], 
-                            target_streams: [], 
+                            tag: '', 
+                            target_classes: clsName ? [clsName] : [], 
+                            target_streams: stmName ? [stmName] : [], 
                             target_exams: [], 
                             icon_url: '' 
                         }); 
+                        setTargetType(clsName ? 'CBSE' : '');
+                        setCreationStep(clsName ? 1 : 0);
                         setIsAdding(true); 
                     }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
                         <Plus size={14} /> New Subject
@@ -968,18 +984,88 @@ const ContentView: React.FC = () => {
                 )}
             </div>
 
-            {/* Path / Breadcrumbs for Folders */}
-            {view === 'folders' && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/[0.03] dark:bg-white/[0.03] rounded-xl overflow-x-auto no-scrollbar">
-                    <button onClick={navigateRoot} className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${path.length === 0 ? 'text-violet-500' : 'text-slate-400'}`}>Roots</button>
-                    {path.map((f, i) => (
-                        <React.Fragment key={f.id}>
-                            <ChevronRight size={10} className="text-slate-300 shrink-0" />
-                            <button onClick={() => navigateTo(f, i)} className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${i === path.length - 1 ? 'text-violet-500' : 'text-slate-400'}`}>{f.name}</button>
-                        </React.Fragment>
-                    ))}
-                </div>
-            )}
+            {/* Global Breadcrumbs Navigation */}
+            <div className="flex items-center gap-2 px-5 py-3 bg-slate-900/[0.03] dark:bg-white/[0.03] rounded-2xl overflow-x-auto no-scrollbar border border-slate-900/[0.06] dark:border-white/[0.06] mb-6">
+                <button 
+                    onClick={() => { setNavLevel('root'); setView('subjects'); setSelectedClassId(null); setSelectedStreamId(null); setSelectedExamId(null); setCurrentSubject(null); setPath([]); }} 
+                    className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'root' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                    <LayoutDashboard size={12} /> HOME (ROOT)
+                </button>
+
+                {(navLevel === 'classes' || selectedClassId) && (
+                    <>
+                        <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                        <button 
+                            onClick={() => { setNavLevel('classes'); setView('subjects'); setSelectedClassId(null); setSelectedStreamId(null); setCurrentSubject(null); setPath([]); }} 
+                            className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'classes' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            School Classes
+                        </button>
+                    </>
+                )}
+
+                {navLevel === 'exams' || selectedExamId ? (
+                    <>
+                        <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                        <button 
+                            onClick={() => { setNavLevel('exams'); setView('subjects'); setSelectedExamId(null); setCurrentSubject(null); setPath([]); }} 
+                            className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'exams' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            Entrance Exams
+                        </button>
+                    </>
+                ) : null}
+
+                {navLevel === 'exams' && (
+                    <>
+                        <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                        <button className="text-[10px] font-black uppercase tracking-widest text-violet-500 whitespace-nowrap">
+                            Exam Categories
+                        </button>
+                    </>
+                )}
+
+                {selectedExamId && (
+                    <>
+                        <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                        <button 
+                            onClick={() => { setNavLevel('exam-sections'); setView('subjects'); setCurrentSubject(null); setPath([]); }} 
+                            className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'exam-sections' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            {exams.find(ex => ex.id === selectedExamId)?.name}
+                        </button>
+                    </>
+                )}
+
+                {currentSubject && (
+                    <>
+                        <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                        <button 
+                            onClick={() => { setView('folders'); setPath([]); }} 
+                            className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${view === 'folders' && path.length === 0 ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            {currentSubject.name}
+                        </button>
+                    </>
+                )}
+
+                {path.map((f, i) => (
+                    <React.Fragment key={f.id}>
+                        <ChevronRight size={10} className="text-slate-600 shrink-0" />
+                        <button 
+                            onClick={() => {
+                                const newPath = path.slice(0, i + 1);
+                                setPath(newPath);
+                                loadFolderContent(currentSubject!.id, f.id);
+                            }} 
+                            className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${i === path.length - 1 ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
+                        >
+                            {f.name}
+                        </button>
+                    </React.Fragment>
+                ))}
+            </div>
 
             {view === 'subjects' && (
                 <div className="space-y-4">
@@ -1000,21 +1086,21 @@ const ContentView: React.FC = () => {
                             
                             <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
                                 <option value="" className="bg-slate-900 text-white">Class: All</option>
-                                {['IX', 'X', 'XI', 'XII', 'XII+'].map(c => <option key={c} value={c} className="bg-slate-900 text-white">{c}</option>)}
+                                {classes.map(c => <option key={c.id} value={c.name} className="bg-slate-900 text-white">{c.name}</option>)}
                             </select>
 
                             <span className="w-1 h-1 rounded-full bg-slate-400/20 mx-1.5"></span>
 
                             <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterStream} onChange={e => setFilterStream(e.target.value)}>
                                 <option value="" className="bg-slate-900 text-white">Stream: All</option>
-                                {streams.map(s => <option key={s} value={s} className="bg-slate-900 text-white">{s}</option>)}
+                                {streams.map(s => <option key={s.id} value={s.name} className="bg-slate-900 text-white">{s.name}</option>)}
                             </select>
                             
                             <span className="w-1 h-1 rounded-full bg-slate-400/20 mx-1.5"></span>
 
                             <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterExam} onChange={e => setFilterExam(e.target.value)}>
                                 <option value="" className="bg-slate-900 text-white">Exam: All</option>
-                                {exams.map(ex => <option key={ex} value={ex} className="bg-slate-900 text-white">{ex}</option>)}
+                                {exams.map(ex => <option key={ex.id} value={ex.name} className="bg-slate-900 text-white">{ex.name}</option>)}
                             </select>
                         </div>
                         
@@ -1051,7 +1137,7 @@ const ContentView: React.FC = () => {
                                                             if (target !== 'CBSE') {
                                                                 setSubForm({
                                                                     ...subForm,
-                                                                    category: 'Core',
+                                                                    tag: '',
                                                                     code: `${target}-MAIN`,
                                                                     target_exams: [target],
                                                                     target_classes: []  // Competitive exams only appear in exam sections, not in class sections
@@ -1059,7 +1145,7 @@ const ContentView: React.FC = () => {
                                                             } else {
                                                                 setSubForm({
                                                                     ...subForm,
-                                                                    category: 'Core',
+                                                                    tag: '',
                                                                     code: '',
                                                                     target_exams: [],
                                                                     target_classes: []
@@ -1096,21 +1182,14 @@ const ContentView: React.FC = () => {
 
                                             <div className="space-y-4">
                                                 <div className="grid grid-cols-2 gap-4">
-                                                    {targetType === 'CBSE' && (
-                                                        <div className="space-y-1">
-                                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Type</label>
-                                                            <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.category} onChange={e => setSubForm({ ...subForm, category: e.target.value as SubjectCategory })}>
-                                                                <option value="Core">Core Subject</option>
-                                                                <option value="Additional">Additional Subject</option>
-                                                            </select>
-                                                        </div>
-                                                    )}
-                                                    {targetType === 'CBSE' && (
-                                                        <div className="space-y-1">
-                                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Ref Code</label>
-                                                            <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.code} onChange={e => setSubForm({ ...subForm, code: e.target.value })} placeholder="e.g. MAT-041" />
-                                                        </div>
-                                                    )}
+                                                    <div className="space-y-1">
+                                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Section Tag (Appears On Dashboard)</label>
+                                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.tag} onChange={e => setSubForm({ ...subForm, tag: e.target.value })} placeholder="e.g. NEW, IMP, LIVE..." />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Ref Code</label>
+                                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.code} onChange={e => setSubForm({ ...subForm, code: e.target.value })} placeholder="e.g. MAT-041" />
+                                                    </div>
                                                 </div>
                                                 
                                                 <div className="space-y-1">
@@ -1165,30 +1244,30 @@ const ContentView: React.FC = () => {
                                                             <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Target Classes</label>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {classes.map(c => {
-                                                                    const isSelected = subForm.target_classes?.includes(c);
+                                                                    const isSelected = subForm.target_classes?.includes(c.name);
                                                                     return (
-                                                                        <button key={c} type="button" onClick={() => setSubForm(prev => {
+                                                                        <button key={c.id} type="button" onClick={() => setSubForm(prev => {
                                                                             const current = prev.target_classes || [];
-                                                                            const next = isSelected ? current.filter((x: string) => x !== c) : [...current, c];
+                                                                            const next = isSelected ? current.filter((x: string) => x !== c.name) : [...current, c.name];
                                                                             return { ...prev, target_classes: next };
-                                                                        })} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}>{c}</button>
+                                                                        })} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}>{c.name}</button>
                                                                     );
                                                                 })}
                                                             </div>
                                                         </div>
 
-                                                        {subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c)) && (
+                                                        {(subForm.target_classes?.some(c => ['XI', 'XII', 'XII+'].includes(c)) || subForm.target_classes?.length === 0) && (
                                                             <div className="space-y-2">
                                                                 <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Target Streams</label>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {streams.map(s => {
-                                                                        const isSelected = subForm.target_streams?.includes(s);
+                                                                        const isSelected = subForm.target_streams?.includes(s.name);
                                                                         return (
-                                                                            <button key={s} type="button" onClick={() => setSubForm(prev => {
+                                                                            <button key={s.id} type="button" onClick={() => setSubForm(prev => {
                                                                                 const current = prev.target_streams || [];
-                                                                                const next = isSelected ? current.filter((x: string) => x !== s) : [...current, s];
+                                                                                const next = isSelected ? current.filter((x: string) => x !== s.name) : [...current, s.name];
                                                                                 return { ...prev, target_streams: next };
-                                                                            })} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}>{s}</button>
+                                                                            })} className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${isSelected ? 'bg-cyan-600 border-cyan-500 text-white shadow-lg' : 'bg-white dark:bg-white/5 border-slate-100 dark:border-white/10 text-slate-400 opacity-60'}`}>{s.name}</button>
                                                                         );
                                                                     })}
                                                                 </div>
@@ -1257,47 +1336,160 @@ const ContentView: React.FC = () => {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
-                                 {view === 'subjects' ? (
-                            subjects.length === 0 ? (
-                                <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">Empty Data Store</div>
-                            ) : subjects.filter(s => {
-                                const name = s.name.toLowerCase();
-                                const code = s.code.toLowerCase();
-                                const query = subSearch.toLowerCase();
-                                const matchesSearch = name.includes(query) || code.includes(query);
-                                const matchesClass = !filterClass || s.target_classes?.includes(filterClass);
-                                const matchesStream = !filterStream || s.target_streams?.includes(filterStream);
-                                const matchesExam = !filterExam || s.target_exams?.includes(filterExam);
-                                return matchesSearch && matchesClass && matchesStream && matchesExam;
-                            }).map(s => (
-                                <div key={s.id} onClick={() => drillDownSubject(s)} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4 border-transparent hover:border-violet-500">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-12 h-12 bg-white/5 dark:bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center p-2 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
-                                            <img src={s.icon_url || '/assets/subjects/relativity.png'} className="w-full h-full object-contain filter drop-shadow-sm" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/3426/3426653.png')} />
+                        {view === 'subjects' ? (
+                            <>
+                                {navLevel === 'root' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                                        <div onClick={() => setNavLevel('classes')} className="group relative bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-violet-600/10 hover:border-violet-500/50 transition-all shadow-xl hover:shadow-violet-600/20 active:scale-95 overflow-hidden">
+                                            <div className="absolute -right-4 -bottom-4 text-violet-600/10 rotate-12 group-hover:rotate-0 transition-transform"><Book size={120} /></div>
+                                            <div className="w-20 h-20 rounded-2xl bg-violet-600/20 flex items-center justify-center text-3xl group-hover:bg-violet-600 transition-colors shadow-lg shadow-violet-600/20">🏫</div>
+                                            <div className="text-center z-10">
+                                                <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">School Classes</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Manage Class & Stream Hierarchy</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{s.name}</h4>
-                                            <div className="flex items-center gap-3 mt-1">
-                                                <span className="text-[8px] font-black bg-slate-900/10 dark:bg-white/10 text-slate-500 px-2 py-0.5 rounded uppercase">{s.code}</span>
-                                                <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${s.category === 'Core' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'}`}>{s.category}</span>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {s.target_classes?.map(c => <span key={c} className="text-[7px] font-black border border-slate-500/20 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded uppercase">{c}</span>)}
-                                                    {s.target_streams?.map(st => <span key={st} className="text-[7px] font-black border border-cyan-500/20 text-cyan-500 px-1.5 py-0.5 rounded uppercase">{st}</span>)}
-                                                    {s.target_exams?.map(ex => <span key={ex} className="text-[7px] font-black border border-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded uppercase">{ex}</span>)}
-                                                </div>
+
+                                        <div onClick={() => setNavLevel('exams')} className="group relative bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-emerald-600/10 hover:border-emerald-500/50 transition-all shadow-xl hover:shadow-emerald-600/20 active:scale-95 overflow-hidden">
+                                            <div className="absolute -right-4 -bottom-4 text-emerald-600/10 -rotate-12 group-hover:rotate-0 transition-transform"><Medal size={120} /></div>
+                                            <div className="w-20 h-20 rounded-2xl bg-emerald-600/20 flex items-center justify-center text-3xl group-hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-600/20">🏆</div>
+                                            <div className="text-center z-10">
+                                                <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">Competitive Exams</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">JEE, NEET, CUET & Entrance Portal</p>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex flex-col gap-1 mr-2">
-                                            <button onClick={(e) => { e.stopPropagation(); handleReorder('subject', 'up', s); }} className="p-1 text-slate-300 hover:text-violet-500 transition-colors"><ChevronUp size={12} /></button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleReorder('subject', 'down', s); }} className="p-1 text-slate-300 hover:text-violet-500 transition-colors"><ChevronDown size={12} /></button>
-                                        </div>
-                                        <button onClick={(e) => { e.stopPropagation(); startEditSubject(s); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors opacity-0 group-hover:opacity-100"><Pencil size={16} /></button>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteSubject(s.id).then(loadSubjects); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+                                )}
+
+                                {navLevel === 'classes' && (
+                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+
+                                        {classes.map(c => (
+                                            <div key={c.id} onClick={() => { setSelectedClassId(c.id); setNavLevel('streams'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-violet-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📂</div>
+                                                    <div>
+                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{c.name}</h4>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Class Folder</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                            </div>
+                                        ))}
+                                        {classes.length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No Classes Defined</div>}
                                     </div>
-                                </div>
-                            ))
+                                )}
+
+                                {navLevel === 'streams' && (
+                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+                                        {streams.filter(s => classStreams.some(cs => cs.class_id === selectedClassId && cs.stream_id === s.id)).map(s => (
+                                            <div key={s.id} onClick={() => { setSelectedStreamId(s.id); setNavLevel('sections'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-cyan-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🔗</div>
+                                                    <div>
+                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{s.name}</h4>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Stream Folder</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                            </div>
+                                        ))}
+                                        {streams.filter(s => classStreams.some(cs => cs.class_id === selectedClassId && cs.stream_id === s.id)).length === 0 && (
+                                            <div className="py-20 text-center text-slate-400 text-xs font-bold px-10 leading-relaxed uppercase tracking-widest opacity-50">
+                                                This class has no streams linked.<br/>
+                                                <span className="text-[9px] lowercase font-medium">Link them in Settings &gt; Platform Settings</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) || null}
+
+                                {navLevel === 'sections' && (
+                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+                                        {subjects.filter(s => {
+                                            const clsName = classes.find(c => c.id === selectedClassId)?.name;
+                                            const stmName = streams.find(st => st.id === selectedStreamId)?.name;
+                                            const query = subSearch.toLowerCase();
+                                            const matchesSearch = s.name.toLowerCase().includes(query);
+                                            const matchesClass = s.target_classes?.includes(clsName || '');
+                                            const matchesStream = s.target_streams?.includes(stmName || '');
+                                            return matchesSearch && matchesClass && matchesStream;
+                                        }).map(s => (
+                                            <div key={s.id} onClick={() => { setCurrentSubject(s); setView('folders'); setNavLevel('content'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4 border-transparent hover:border-violet-500">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="w-12 h-12 bg-white/5 dark:bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center p-2 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
+                                                        <img src={s.icon_url || '/assets/subjects/relativity.png'} className="w-full h-full object-contain filter drop-shadow-sm" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/3426/3426653.png')} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{s.name}</h4>
+                                                        <div className="flex items-center gap-3 mt-1">
+                                                            <span className="text-[8px] font-black bg-slate-900/10 dark:bg-white/10 text-slate-500 px-2 py-0.5 rounded uppercase">{s.code}</span>
+                                                            {s.tag && <span className="text-[8px] font-black px-2 py-0.5 rounded uppercase bg-violet-500/10 text-violet-500">{s.tag}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={(e) => { e.stopPropagation(); startEditSubject(s); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors opacity-0 group-hover:opacity-100"><Pencil size={16} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); deleteSubject(s.id).then(loadSubjects); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {subjects.filter(s => {
+                                             const clsName = classes.find(c => c.id === selectedClassId)?.name;
+                                             const stmName = streams.find(st => st.id === selectedStreamId)?.name;
+                                             return s.target_classes?.includes(clsName || '') && s.target_streams?.includes(stmName || '');
+                                        }).length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No sections in this stream</div>}
+                                    </div>
+                                )}
+
+                                {navLevel === 'exams' && (
+                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+                                        {exams.map(ex => (
+                                            <div key={ex.id} onClick={() => { setSelectedExamId(ex.id); setNavLevel('exam-sections'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-amber-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📝</div>
+                                                    <div>
+                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{ex.name}</h4>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Exam Folder</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                            </div>
+                                        ))}
+                                        {exams.length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No Exams Defined</div>}
+                                    </div>
+                                )}
+
+                                {navLevel === 'exam-sections' && (
+                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+                                        {subjects.filter(s => {
+                                            const exName = exams.find(ex => ex.id === selectedExamId)?.name;
+                                            return s.target_exams?.includes(exName || '');
+                                        }).map(s => (
+                                            <div key={s.id} onClick={() => { setCurrentSubject(s); setView('folders'); setNavLevel('content'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4 border-transparent hover:border-violet-500">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="w-12 h-12 bg-white/5 dark:bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center p-2 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
+                                                        <img src={s.icon_url || '/assets/subjects/relativity.png'} className="w-full h-full object-contain filter drop-shadow-sm" onError={(e) => (e.currentTarget.src = 'https://cdn-icons-png.flaticon.com/512/3426/3426653.png')} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{s.name}</h4>
+                                                        <div className="flex items-center gap-3 mt-1">
+                                                            <span className="text-[8px] font-black bg-slate-900/10 dark:bg-white/10 text-slate-500 px-2 py-0.5 rounded uppercase">{s.code}</span>
+                                                            {s.tag && <span className="text-[8px] font-black px-2 py-0.5 rounded uppercase bg-violet-500/10 text-violet-500">{s.tag}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button onClick={(e) => { e.stopPropagation(); startEditSubject(s); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors opacity-0 group-hover:opacity-100"><Pencil size={16} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); deleteSubject(s.id).then(loadSubjects); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {subjects.filter(s => {
+                                             const exName = exams.find(ex => ex.id === selectedExamId)?.name;
+                                             return s.target_exams?.includes(exName || '');
+                                        }).length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No sections in this exam</div>}
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
                                 {folders.map((f, i) => (
@@ -1310,10 +1502,6 @@ const ContentView: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="flex flex-col gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={(e) => { e.stopPropagation(); handleReorder('folder', 'up', f); }} className="p-1 text-slate-300 hover:text-violet-500 transition-colors"><ChevronUp size={12} /></button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleReorder('folder', 'down', f); }} className="p-1 text-slate-300 hover:text-violet-500 transition-colors"><ChevronDown size={12} /></button>
-                                            </div>
                                             <button onClick={(e) => { e.stopPropagation(); startEditFolder(f); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors opacity-0 group-hover:opacity-100"><Pencil size={16} /></button>
                                             <button onClick={(e) => { e.stopPropagation(); deleteFolder(f.id).then(() => loadFolderContent(currentSubject!.id, path[path.length - 1]?.id || null)); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
                                         </div>
@@ -1331,17 +1519,13 @@ const ContentView: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="flex flex-col gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={(e) => { e.stopPropagation(); handleReorder('material', 'up', m); }} className="p-1 text-slate-300 hover:text-violet-500 transition-colors"><ChevronUp size={12} /></button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleReorder('material', 'down', m); }} className="p-1 text-slate-300 hover:text-violet-500 transition-colors"><ChevronDown size={12} /></button>
-                                            </div>
                                             <button onClick={(e) => { e.stopPropagation(); startEditMaterial(m); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors opacity-0 group-hover:opacity-100"><Pencil size={16} /></button>
                                             <button onClick={(e) => { e.stopPropagation(); deleteMaterial(m.id).then(() => loadFolderContent(currentSubject!.id, path[path.length - 1]?.id || null)); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                 ))}
                                 {folders.length === 0 && materials.length === 0 && (
-                                    <div className="py-20 text-center text-slate-400 text-xs font-bold">This node is empty.</div>
+                                    <div className="py-20 text-center text-slate-400 text-xs font-bold leading-relaxed uppercase tracking-widest opacity-50">This node is empty.<br/><span className="text-[9px] lowercase font-medium">Add content using the [+] button top right</span></div>
                                 )}
                             </div>
                         )}
@@ -1361,9 +1545,92 @@ const SettingsView: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+    const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+    const [exams, setExams] = useState<{ id: string; name: string }[]>([]);
+    const [streams, setStreams] = useState<{ id: string; name: string }[]>([]);
+    const [classStreams, setClassStreams] = useState<{ class_id: string; stream_id: string }[]>([]);
+    const [activeClassId, setActiveClassId] = useState<string | null>(null);
+    const [newClass, setNewClass] = useState('');
+    const [newExam, setNewExam] = useState('');
+    const [newStream, setNewStream] = useState('');
+
     useEffect(() => {
         fetchMaintenanceSettings().then(d => { setMaintenance(d); setLoading(false); });
+        fetchClasses().then(setClasses);
+        fetchExams().then(setExams);
+        fetchStreams().then(setStreams);
+        fetchClassStreams().then(setClassStreams);
     }, []);
+
+    const handleAddClass = async () => {
+        if (!newClass.trim()) return;
+        try {
+            await addClass(newClass.trim());
+            setClasses(await fetchClasses());
+            setMsg({ type: 'success', text: `Added class: ${newClass}` });
+            setNewClass('');
+        } catch (_) { setMsg({ type: 'error', text: 'Error adding class' }); }
+    };
+
+    const handleDeleteClass = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this class?')) return;
+        try {
+            await deleteClass(id);
+            setClasses(await fetchClasses());
+            setMsg({ type: 'success', text: 'Class removed' });
+        } catch (_) { setMsg({ type: 'error', text: 'Error removing class' }); }
+    };
+
+    const handleAddExam = async () => {
+        if (!newExam.trim()) return;
+        try {
+            await addExam(newExam.trim());
+            setExams(await fetchExams());
+            setMsg({ type: 'success', text: `Added exam: ${newExam}` });
+            setNewExam('');
+        } catch (_) { setMsg({ type: 'error', text: 'Error adding exam' }); }
+    };
+
+    const handleDeleteExam = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this exam?')) return;
+        try {
+            await deleteExam(id);
+            setExams(await fetchExams());
+            setMsg({ type: 'success', text: 'Exam removed' });
+        } catch (_) { setMsg({ type: 'error', text: 'Error removing exam' }); }
+    };
+
+    const handleToggleStreamLink = async (streamId: string) => {
+        if (!activeClassId) return;
+        const isLinked = classStreams.some(cs => cs.class_id === activeClassId && cs.stream_id === streamId);
+        try {
+            if (isLinked) {
+                await unlinkStreamFromClass(activeClassId, streamId);
+            } else {
+                await linkStreamToClass(activeClassId, streamId);
+            }
+            setClassStreams(await fetchClassStreams());
+        } catch (_) { setMsg({ type: 'error', text: 'Mapping failed' }); }
+    };
+
+    const handleAddStream = async () => {
+        if (!newStream.trim()) return;
+        try {
+            await addStream(newStream.trim());
+            setStreams(await fetchStreams());
+            setMsg({ type: 'success', text: `Added stream: ${newStream}` });
+            setNewStream('');
+        } catch (_) { setMsg({ type: 'error', text: 'Error adding stream' }); }
+    };
+
+    const handleDeleteStream = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this stream?')) return;
+        try {
+            await deleteStream(id);
+            setStreams(await fetchStreams());
+            setMsg({ type: 'success', text: 'Stream removed' });
+        } catch (_) { setMsg({ type: 'error', text: 'Error removing stream' }); }
+    };
 
     const toggle = async () => {
         if (!maintenance) return;
@@ -1437,6 +1704,100 @@ const SettingsView: React.FC = () => {
                     >
                         {maintenance?.maintenance_enabled ? '✅ Restore Platform Access' : '🔴 Emergency Grid Shutdown'}
                     </button>
+                </div>
+
+                {/* Dynamic Contexts Card */}
+                <div className="bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl p-6 space-y-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-violet-500/15 text-violet-400">
+                            <BookOpen size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Category Command</h3>
+                            <p className="text-[10px] text-slate-900/30 dark:text-white/30 font-medium">Manage Classes, Streams & Exams.</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="space-y-3">
+                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">School Classes (Click to map streams)</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {classes.map(c => (
+                                    <div key={c.id} 
+                                        onClick={() => setActiveClassId(activeClassId === c.id ? null : c.id)}
+                                        className={`flex items-center gap-2 px-3 py-2 border rounded-xl cursor-pointer transition-all ${activeClassId === c.id ? 'bg-violet-600 border-violet-500 shadow-lg shadow-violet-900/20' : 'bg-white/5 border-white/10 hover:border-violet-500/30'}`}>
+                                        <span className={`text-[10px] font-black uppercase tracking-tight ${activeClassId === c.id ? 'text-white' : 'text-slate-400'}`}>{c.name}</span>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id); }} className={`w-4 h-4 flex items-center justify-center transition-all hover:scale-125 ${activeClassId === c.id ? 'text-white/50 hover:text-white' : 'text-red-400 group-hover:block'}`}>
+                                            <Trash2 size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <input type="text" className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:border-violet-500/50 outline-none transition-all" value={newClass} onChange={e => setNewClass(e.target.value)} placeholder="Add Class (e.g. Graduation)" />
+                                <button onClick={handleAddClass} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-violet-500 transition-all shadow-md">Add</button>
+                            </div>
+                        </div>
+
+                        {activeClassId && (
+                            <div className="p-4 bg-violet-600/5 border border-violet-500/20 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[9px] font-black uppercase text-violet-400 tracking-widest">Available Streams for {classes.find(c => c.id === activeClassId)?.name}</label>
+                                    <button onClick={() => setActiveClassId(null)} className="text-[8px] font-black uppercase text-slate-500 hover:text-white">Close</button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {streams.map(s => {
+                                        const isLinked = classStreams.some(cs => cs.class_id === activeClassId && cs.stream_id === s.id);
+                                        return (
+                                            <button 
+                                                key={s.id} 
+                                                onClick={() => handleToggleStreamLink(s.id)}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border transition-all ${isLinked ? 'bg-emerald-500 border-emerald-400 text-slate-900' : 'bg-white/5 border-white/10 text-slate-400 opacity-60'}`}>
+                                                {s.name}
+                                            </button>
+                                        );
+                                    })}
+                                    {streams.length === 0 && <p className="text-[10px] text-slate-500 italic">No streams defined yet. Add some below.</p>}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">Dynamic Streams (Global List)</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {streams.map(s => (
+                                    <div key={s.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-xl group transition-all hover:border-violet-500/30">
+                                        <span className="text-[10px] font-black text-violet-400 uppercase tracking-tight">{s.name}</span>
+                                        <button onClick={() => handleDeleteStream(s.id)} className="w-4 h-4 flex items-center justify-center text-red-400/0 group-hover:text-red-400 transition-all hover:scale-125">
+                                            <Trash2 size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <input type="text" className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:border-violet-500/50 outline-none transition-all" value={newStream} onChange={e => setNewStream(e.target.value)} placeholder="Add Global Stream (e.g. PCB)" />
+                                <button onClick={handleAddStream} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-violet-500 transition-all shadow-md">Add</button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">Competitive Exams</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {exams.map(e => (
+                                    <div key={e.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-xl group transition-all hover:border-violet-500/30">
+                                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tight">{e.name}</span>
+                                        <button onClick={() => handleDeleteExam(e.id)} className="w-4 h-4 flex items-center justify-center text-red-400/0 group-hover:text-red-400 transition-all hover:scale-125">
+                                            <Trash2 size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-2">
+                                <input type="text" className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:border-violet-500/50 outline-none transition-all" value={newExam} onChange={e => setNewExam(e.target.value)} placeholder="Add Exam (e.g. UPSC)" />
+                                <button onClick={handleAddExam} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-violet-500 transition-all shadow-md">Add</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Message & Schedule Card */}

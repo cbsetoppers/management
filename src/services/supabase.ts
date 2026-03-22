@@ -66,14 +66,13 @@ export const deleteOperator = async (id: string) => {
 
 // ─── CONTENT MANAGEMENT (STRICT RULES) ──────────────────────────────
 
-export type SubjectCategory = 'Core' | 'Additional';
 export type MaterialType = 'pdf' | 'image' | 'video';
 
 export interface Subject {
     id: string;
     name: string;
     code: string;
-    category: SubjectCategory;
+    tag: string;
     target_class: string; // Keep for legacy if needed, or we can replace
     target_stream?: string; // Keep for legacy
     target_classes?: string[];
@@ -258,6 +257,60 @@ export const fetchAdminStats = async () => {
         quizCount: 0, // Placeholder
         accuracy: 0
     };
+};
+
+export const fetchClasses = async (): Promise<{id: string, name: string}[]> => {
+    const { data } = await supabase.from('classes').select('id, name').order('id');
+    return data || [];
+};
+
+export const addClass = async (name: string) => {
+    await supabase.from('classes').insert({ name });
+};
+
+export const deleteClass = async (id: string) => {
+    await supabase.from('classes').delete().eq('id', id);
+};
+
+export const fetchExams = async (): Promise<{id: string, name: string}[]> => {
+    const { data } = await supabase.from('competitive_exams').select('id, name').order('name');
+    return data || [];
+};
+
+export const addExam = async (name: string) => {
+    await supabase.from('competitive_exams').insert({ name });
+};
+
+export const deleteExam = async (id: string) => {
+    await supabase.from('competitive_exams').delete().eq('id', id);
+};
+
+export const fetchStreams = async (): Promise<{id: string, name: string}[]> => {
+    const { data } = await supabase.from('streams').select('id, name').order('name');
+    return data || [];
+};
+
+export const addStream = async (name: string) => {
+    await supabase.from('streams').insert({ name });
+};
+
+export const deleteStream = async (id: string) => {
+    await supabase.from('streams').delete().eq('id', id);
+};
+
+export const fetchClassStreams = async (classId?: string): Promise<{ class_id: string; stream_id: string }[]> => {
+    let query = supabase.from('class_streams').select('*');
+    if (classId) query = query.eq('class_id', classId);
+    const { data } = await query;
+    return data || [];
+};
+
+export const linkStreamToClass = async (classId: string, streamId: string) => {
+    await supabase.from('class_streams').upsert({ class_id: classId, stream_id: streamId });
+};
+
+export const unlinkStreamFromClass = async (classId: string, streamId: string) => {
+    await supabase.from('class_streams').delete().match({ class_id: classId, stream_id: streamId });
 };
 
 export const fetchAllStudents = async () => {
