@@ -962,17 +962,18 @@ const ContentView: React.FC = () => {
                         setEditingId(null); 
                         const clsName = classes.find(c => c.id === selectedClassId)?.name;
                         const stmName = streams.find(st => st.id === selectedStreamId)?.name;
+                        const exmName = exams.find(ex => ex.id === selectedExamId)?.name;
                         setSubForm({ 
                             name: '', 
                             code: '', 
                             tag: '', 
                             target_classes: clsName ? [clsName] : [], 
                             target_streams: stmName ? [stmName] : [], 
-                            target_exams: [], 
+                            target_exams: exmName ? [exmName] : [], 
                             icon_url: '' 
                         }); 
-                        setTargetType(clsName ? 'CBSE' : '');
-                        setCreationStep(clsName ? 1 : 0);
+                        setTargetType(clsName ? 'CBSE' : (exmName ? exmName : ''));
+                        setCreationStep((clsName || exmName) ? 1 : 0);
                         setIsAdding(true); 
                     }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
                         <Plus size={14} /> New Subject
@@ -1364,7 +1365,16 @@ const ContentView: React.FC = () => {
                                     <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
 
                                         {classes.map(c => (
-                                            <div key={c.id} onClick={() => { setSelectedClassId(c.id); setNavLevel('streams'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                            <div key={c.id} onClick={() => { 
+                                                setSelectedClassId(c.id); 
+                                                const hasStreams = classStreams.some(cs => cs.class_id === c.id);
+                                                if (hasStreams) {
+                                                    setNavLevel('streams'); 
+                                                } else {
+                                                    setSelectedStreamId(null);
+                                                    setNavLevel('sections');
+                                                }
+                                            }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-12 h-12 bg-violet-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📂</div>
                                                     <div>
@@ -1410,7 +1420,7 @@ const ContentView: React.FC = () => {
                                             const query = subSearch.toLowerCase();
                                             const matchesSearch = s.name.toLowerCase().includes(query);
                                             const matchesClass = s.target_classes?.includes(clsName || '');
-                                            const matchesStream = s.target_streams?.includes(stmName || '');
+                                            const matchesStream = stmName ? s.target_streams?.includes(stmName) : (s.target_streams?.length === 0);
                                             return matchesSearch && matchesClass && matchesStream;
                                         }).map(s => (
                                             <div key={s.id} onClick={() => { setCurrentSubject(s); setView('folders'); setNavLevel('content'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group border-l-4 border-transparent hover:border-violet-500">
@@ -1435,8 +1445,10 @@ const ContentView: React.FC = () => {
                                         {subjects.filter(s => {
                                              const clsName = classes.find(c => c.id === selectedClassId)?.name;
                                              const stmName = streams.find(st => st.id === selectedStreamId)?.name;
-                                             return s.target_classes?.includes(clsName || '') && s.target_streams?.includes(stmName || '');
-                                        }).length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No sections in this stream</div>}
+                                             const matchesClass = s.target_classes?.includes(clsName || '');
+                                             const matchesStream = stmName ? s.target_streams?.includes(stmName) : (s.target_streams?.length === 0);
+                                             return matchesClass && matchesStream;
+                                        }).length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No sections found for this selection</div>}
                                     </div>
                                 )}
 
