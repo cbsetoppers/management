@@ -268,6 +268,10 @@ export const addClass = async (name: string) => {
     await supabase.from('classes').insert({ name });
 };
 
+export const updateClass = async (id: string, name: string) => {
+    await supabase.from('classes').update({ name }).eq('id', id);
+};
+
 export const deleteClass = async (id: string) => {
     await supabase.from('classes').delete().eq('id', id);
 };
@@ -281,6 +285,10 @@ export const addExam = async (name: string) => {
     await supabase.from('competitive_exams').insert({ name });
 };
 
+export const updateExam = async (id: string, name: string) => {
+    await supabase.from('competitive_exams').update({ name }).eq('id', id);
+};
+
 export const deleteExam = async (id: string) => {
     await supabase.from('competitive_exams').delete().eq('id', id);
 };
@@ -292,6 +300,10 @@ export const fetchStreams = async (): Promise<{id: string, name: string}[]> => {
 
 export const addStream = async (name: string) => {
     await supabase.from('streams').insert({ name });
+};
+
+export const updateStream = async (id: string, name: string) => {
+    await supabase.from('streams').update({ name }).eq('id', id);
 };
 
 export const deleteStream = async (id: string) => {

@@ -1635,6 +1635,36 @@ const SettingsView: React.FC = () => {
         } catch (_) { setMsg({ type: 'error', text: 'Error adding stream' }); }
     };
 
+    const handleEditClass = async (id: string, oldName: string) => {
+        const name = prompt('Update Class Name:', oldName);
+        if (!name || name === oldName) return;
+        try {
+            await updateClass(id, name.trim());
+            setClasses(await fetchClasses());
+            setMsg({ type: 'success', text: 'Class updated' });
+        } catch (_) { setMsg({ type: 'error', text: 'Update failed' }); }
+    };
+
+    const handleEditStream = async (id: string, oldName: string) => {
+        const name = prompt('Update Stream Name:', oldName);
+        if (!name || name === oldName) return;
+        try {
+            await updateStream(id, name.trim());
+            setStreams(await fetchStreams());
+            setMsg({ type: 'success', text: 'Stream updated' });
+        } catch (_) { setMsg({ type: 'error', text: 'Update failed' }); }
+    };
+
+    const handleEditExam = async (id: string, oldName: string) => {
+        const name = prompt('Update Exam Name:', oldName);
+        if (!name || name === oldName) return;
+        try {
+            await updateExam(id, name.trim());
+            setExams(await fetchExams());
+            setMsg({ type: 'success', text: 'Exam updated' });
+        } catch (_) { setMsg({ type: 'error', text: 'Update failed' }); }
+    };
+
     const handleDeleteStream = async (id: string) => {
         if (!confirm('Are you sure you want to remove this stream?')) return;
         try {
@@ -1739,9 +1769,14 @@ const SettingsView: React.FC = () => {
                                         onClick={() => setActiveClassId(activeClassId === c.id ? null : c.id)}
                                         className={`flex items-center gap-2 px-3 py-2 border rounded-xl cursor-pointer transition-all ${activeClassId === c.id ? 'bg-violet-600 border-violet-500 shadow-lg shadow-violet-900/20' : 'bg-white/5 border-white/10 hover:border-violet-500/30'}`}>
                                         <span className={`text-[10px] font-black uppercase tracking-tight ${activeClassId === c.id ? 'text-white' : 'text-slate-400'}`}>{c.name}</span>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id); }} className={`w-4 h-4 flex items-center justify-center transition-all hover:scale-125 ${activeClassId === c.id ? 'text-white/50 hover:text-white' : 'text-red-400 group-hover:block'}`}>
-                                            <Trash2 size={10} />
-                                        </button>
+                                        <div className="flex items-center gap-1.5 ml-1">
+                                            <button onClick={(e) => { e.stopPropagation(); handleEditClass(c.id, c.name); }} className={`w-4 h-4 flex items-center justify-center transition-all hover:scale-125 ${activeClassId === c.id ? 'text-white/50 hover:text-white' : 'text-slate-400 hover:text-white'}`}>
+                                                <Pencil size={10} />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteClass(c.id); }} className={`w-4 h-4 flex items-center justify-center transition-all hover:scale-125 ${activeClassId === c.id ? 'text-white/50 hover:text-white' : 'text-red-400'}`}>
+                                                <Trash2 size={10} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -1780,9 +1815,14 @@ const SettingsView: React.FC = () => {
                                 {streams.map(s => (
                                     <div key={s.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-xl group transition-all hover:border-violet-500/30">
                                         <span className="text-[10px] font-black text-violet-400 uppercase tracking-tight">{s.name}</span>
-                                        <button onClick={() => handleDeleteStream(s.id)} className="w-4 h-4 flex items-center justify-center text-red-400/0 group-hover:text-red-400 transition-all hover:scale-125">
-                                            <Trash2 size={10} />
-                                        </button>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => handleEditStream(s.id, s.name)} className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-white transition-all hover:scale-125">
+                                                <Pencil size={10} />
+                                            </button>
+                                            <button onClick={() => handleDeleteStream(s.id)} className="w-4 h-4 flex items-center justify-center text-red-400 transition-all hover:scale-125">
+                                                <Trash2 size={10} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -1798,9 +1838,14 @@ const SettingsView: React.FC = () => {
                                 {exams.map(e => (
                                     <div key={e.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-xl group transition-all hover:border-violet-500/30">
                                         <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tight">{e.name}</span>
-                                        <button onClick={() => handleDeleteExam(e.id)} className="w-4 h-4 flex items-center justify-center text-red-400/0 group-hover:text-red-400 transition-all hover:scale-125">
-                                            <Trash2 size={10} />
-                                        </button>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => handleEditExam(e.id, e.name)} className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-white transition-all hover:scale-125">
+                                                <Pencil size={10} />
+                                            </button>
+                                            <button onClick={() => handleDeleteExam(e.id)} className="w-4 h-4 flex items-center justify-center text-red-400 transition-all hover:scale-125">
+                                                <Trash2 size={10} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
