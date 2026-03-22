@@ -849,6 +849,52 @@ const ContentView: React.FC = () => {
         } catch (_) { alert('Error saving material'); }
     };
 
+    // Nav-level structural management
+    const handleNavAddClass = async () => {
+        const name = prompt('Enter New Class Name:');
+        if (!name) return;
+        try { await addClass(name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+    const handleNavEditClass = async (id: string, old: string) => {
+        const name = prompt('Update Class Name:', old);
+        if (!name || name === old) return;
+        try { await updateClass(id, name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+    const handleNavDeleteClass = async (id: string) => {
+        if (!confirm('Are you sure? This will hide linked content.')) return;
+        try { await deleteClass(id); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+
+    const handleNavAddStream = async () => {
+        const name = prompt('Enter New Stream Name:');
+        if (!name) return;
+        try { await addStream(name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+    const handleNavEditStream = async (id: string, old: string) => {
+        const name = prompt('Update Stream Name:', old);
+        if (!name || name === old) return;
+        try { await updateStream(id, name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+    const handleNavDeleteStream = async (id: string) => {
+        if (!confirm('Are you sure?')) return;
+        try { await deleteStream(id); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+
+    const handleNavAddExam = async () => {
+        const name = prompt('Enter New Exam Name:');
+        if (!name) return;
+        try { await addExam(name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+    const handleNavEditExam = async (id: string, old: string) => {
+        const name = prompt('Update Exam Name:', old);
+        if (!name || name === old) return;
+        try { await updateExam(id, name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+    const handleNavDeleteExam = async (id: string) => {
+        if (!confirm('Are you sure?')) return;
+        try { await deleteExam(id); loadSubjects(); } catch (_) { alert('Error'); }
+    };
+
     const startEditSubject = (s: Subject) => {
         setSubForm(s);
         setEditingId(s.id);
@@ -1362,30 +1408,42 @@ const ContentView: React.FC = () => {
                                 )}
 
                                 {navLevel === 'classes' && (
-                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
-
-                                        {classes.map(c => (
-                                            <div key={c.id} onClick={() => { 
-                                                setSelectedClassId(c.id); 
-                                                const hasStreams = classStreams.some(cs => cs.class_id === c.id);
-                                                if (hasStreams) {
-                                                    setNavLevel('streams'); 
-                                                } else {
-                                                    setSelectedStreamId(null);
-                                                    setNavLevel('sections');
-                                                }
-                                            }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-violet-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📂</div>
-                                                    <div>
-                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{c.name}</h4>
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Class Folder</p>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-end p-2 px-6">
+                                            <button onClick={handleNavAddClass} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-violet-500 transition-all active:scale-95">
+                                                <Plus size={14} /> Create Class
+                                            </button>
+                                        </div>
+                                        <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+                                            {classes.map(c => (
+                                                <div key={c.id} onClick={() => { 
+                                                    setSelectedClassId(c.id); 
+                                                    const hasStreams = classStreams.some(cs => cs.class_id === c.id);
+                                                    if (hasStreams) {
+                                                        setNavLevel('streams'); 
+                                                    } else {
+                                                        setSelectedStreamId(null);
+                                                        setNavLevel('sections');
+                                                    }
+                                                }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-violet-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📂</div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{c.name}</h4>
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Class Folder</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                            <button onClick={(e) => { e.stopPropagation(); handleNavEditClass(c.id, c.name); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors"><Pencil size={15} /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); handleNavDeleteClass(c.id); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
+                                                        </div>
+                                                        <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
                                                     </div>
                                                 </div>
-                                                <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
-                                            </div>
-                                        ))}
-                                        {classes.length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No Classes Defined</div>}
+                                            ))}
+                                            {classes.length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No Classes Defined</div>}
+                                        </div>
                                     </div>
                                 )}
 
@@ -1453,20 +1511,33 @@ const ContentView: React.FC = () => {
                                 )}
 
                                 {navLevel === 'exams' && (
-                                    <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
-                                        {exams.map(ex => (
-                                            <div key={ex.id} onClick={() => { setSelectedExamId(ex.id); setNavLevel('exam-sections'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-amber-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📝</div>
-                                                    <div>
-                                                        <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{ex.name}</h4>
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Exam Folder</p>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-end p-2 px-6">
+                                            <button onClick={handleNavAddExam} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-emerald-500 transition-all active:scale-95">
+                                                <Plus size={14} /> Create Exam
+                                            </button>
+                                        </div>
+                                        <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
+                                            {exams.map(ex => (
+                                                <div key={ex.id} onClick={() => { setSelectedExamId(ex.id); setNavLevel('exam-sections'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-amber-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📝</div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{ex.name}</h4>
+                                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Exam Folder</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                            <button onClick={(e) => { e.stopPropagation(); handleNavEditExam(ex.id, ex.name); }} className="p-2 text-slate-300 hover:text-emerald-500 transition-colors"><Pencil size={15} /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); handleNavDeleteExam(ex.id); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
+                                                        </div>
+                                                        <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
                                                     </div>
                                                 </div>
-                                                <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
-                                            </div>
-                                        ))}
-                                        {exams.length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No Exams Defined</div>}
+                                            ))}
+                                            {exams.length === 0 && <div className="py-20 text-center text-slate-400 text-xs font-bold uppercase tracking-widest opacity-50">No Exams Defined</div>}
+                                        </div>
                                     </div>
                                 )}
 
