@@ -72,13 +72,13 @@ const LoginPage: React.FC<{ onLogin: (op: Operator) => void }> = ({ onLogin }) =
                     </div>
                 </div>
                 <div className="space-y-5">
-                    <input type="email" placeholder="Email Address" className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-sm font-medium text-white outline-none focus:border-violet-500/40" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+                    <input type="email" placeholder="Email Address" className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-sm font-medium dark:text-white outline-none focus:border-violet-500/40" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
                     <div className="relative">
-                        <input type={showPass ? 'text' : 'password'} placeholder="Security Key" className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 pr-14 text-sm font-medium text-white outline-none focus:border-violet-500/40" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-                        <button type="button" className="absolute right-5 top-1/2 -translate-y-1/2 text-white/10 hover:text-white/40" onClick={() => setShowPass(!showPass)}>{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+                        <input type={showPass ? 'text' : 'password'} placeholder="Security Key" className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 pr-14 text-sm font-medium dark:text-white outline-none focus:border-violet-500/40" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} />
+                        <button type="button" className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/10 hover:text-violet-500" onClick={() => setShowPass(!showPass)}>{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                     </div>
                     {error && <p className="text-red-500 text-[11px] font-bold text-center">{error}</p>}
-                    <button onClick={handleLogin} disabled={loading} className="w-full py-4.5 bg-white text-black hover:bg-violet-500 hover:text-white font-black uppercase text-[11px] tracking-[0.2em] rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+                    <button onClick={handleLogin} disabled={loading} className="w-full py-4.5 bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-violet-500 dark:hover:bg-violet-500 hover:text-white font-black uppercase text-[11px] tracking-[0.2em] rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
                         {loading ? 'Authenticating...' : <><Shield size={16} /> Enter Terminal</>}
                     </button>
                 </div>
@@ -91,22 +91,22 @@ const LoginPage: React.FC<{ onLogin: (op: Operator) => void }> = ({ onLogin }) =
 // COMPONENTS
 // ─────────────────────────────────────────────────────────────────────
 const SidebarItem: React.FC<{ icon: React.ReactNode; label: string; active: boolean; onClick: () => void }> = ({ icon, label, active, onClick }) => (
-    <motion.button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative ${active ? 'text-violet-400 bg-violet-600/10 border border-violet-500/20' : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04]'}`}>
-        <span className={active ? 'text-violet-400' : 'text-white/25'}>{icon}</span>
+    <motion.button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative ${active ? 'text-violet-400 bg-violet-600/10 border border-violet-500/20' : 'text-slate-500 dark:text-white/30 hover:text-slate-900 dark:hover:text-white/60 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
+        <span className={active ? 'text-violet-400' : 'opacity-50'}>{icon}</span>
         <span>{label}</span>
         {active && <ChevronRight size={12} className="ml-auto text-violet-500" />}
     </motion.button>
 );
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode; sub: string; color: string }> = ({ label, value, icon, sub, color }) => (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/[0.07] transition-all group shadow-sm">
+    <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 hover:bg-slate-50 dark:hover:bg-white/[0.07] transition-all group shadow-sm">
         <div className="flex items-start justify-between mb-5">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} bg-current/10`}>{icon}</div>
-            <Activity size={14} className="text-white/10" />
+            <Activity size={14} className="text-slate-300 dark:text-white/10" />
         </div>
         <p className={`text-3xl font-black ${color} tracking-tighter mb-1`}>{value}</p>
-        <p className="text-[11px] font-black text-white/20 uppercase tracking-widest mb-1">{label}</p>
-        <p className="text-[10px] text-white/15 font-medium">{sub}</p>
+        <p className="text-[11px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-[10px] text-slate-400 dark:text-white/15 font-medium">{sub}</p>
     </div>
 );
 
@@ -121,12 +121,12 @@ const DashboardView: React.FC<{ stats: any; operator: Operator; onRefresh: () =>
             <div className="flex items-start justify-between">
                 <div>
                     <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border mb-3 ${rc.bg} ${rc.color}`}>{rc.icon} {rc.label}</div>
-                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Command Center</h1>
-                    <p className="text-white/30 text-sm font-medium mt-1">Platform overview for {operator.name}.</p>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">Command Center</h1>
+                    <p className="text-slate-500 dark:text-white/30 text-sm font-medium mt-1">Platform overview for {operator.name}.</p>
                 </div>
                 <div className="flex gap-3">
                     <button onClick={() => setView('content')} className="px-4 py-2.5 bg-violet-600 border border-violet-500 rounded-xl text-[10px] font-black text-white uppercase tracking-widest shadow-lg shadow-violet-900/20"><Settings size={13} className="inline mr-2" /> Content Manager</button>
-                    <button onClick={onRefresh} className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-white/40 uppercase tracking-widest"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh</button>
+                    <button onClick={onRefresh} className="px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-widest transition-all hover:bg-slate-50"><RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Refresh</button>
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -139,7 +139,6 @@ const DashboardView: React.FC<{ stats: any; operator: Operator; onRefresh: () =>
     );
 };
 
-const CONTENT_MANAGER_REBUILD_ID = "cm_rebuild_v3";
 // Universal Content Manager Component
 const ContentView: React.FC = () => {
     const [path, setPath] = useState<TreeNode[]>([]);
@@ -152,7 +151,7 @@ const ContentView: React.FC = () => {
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const [modalMode, setModalMode] = useState<'node' | 'material'>('node');
 
-    const [nodeForm, setNodeForm] = useState<{ name: string; type: NodeType; category: string }>({ name: '', type: 'SECTION', category: 'SECONDARY' });
+    const [nodeForm, setNodeForm] = useState<{ name: string; type: NodeType; category: string }>({ name: '', type: 'CLASS', category: 'SECONDARY' });
     const [matForm, setMatForm] = useState<Partial<Material>>({ title: '', url: '', type: 'pdf' });
 
     const currentNode = path.length > 0 ? path[path.length - 1] : null;
@@ -209,49 +208,49 @@ const ContentView: React.FC = () => {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-violet-600/10 rounded-2xl flex items-center justify-center text-2xl border border-violet-500/20">{currentNode ? '📁' : '🏢'}</div>
+                    <div className="w-12 h-12 bg-violet-600/10 dark:bg-violet-600/10 rounded-2xl flex items-center justify-center text-2xl border border-violet-500/20">{currentNode ? '📁' : '🏢'}</div>
                     <div>
-                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">{currentNode ? currentNode.name : 'Core Materials'}</h1>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">{currentNode ? currentNode.name : 'Core Materials'}</h1>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{currentNode ? `Layer: ${currentNode.node_type}` : 'Root Navigator'}</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => { setModalMode('node'); setIsEditing(false); setNodeForm({ name: '', type: currentNode ? (currentNode.node_type === 'CLASS' ? 'STREAM' : 'SECTION') : 'CLASS', category: 'SECONDARY' }); setIsAdding(true); }} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">+ Node</button>
-                    {currentNode && <button onClick={() => { setModalMode('material'); setIsEditing(false); setMatForm({ title: '', url: '', type: 'pdf' }); setIsAdding(true); }} className="px-5 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">+ Media</button>}
+                    <button onClick={() => { setModalMode('node'); setIsEditing(false); setNodeForm({ name: '', type: currentNode ? (currentNode.node_type === 'CLASS' ? 'STREAM' : 'SECTION') : 'CLASS', category: 'SECONDARY' }); setIsAdding(true); }} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">+ Node</button>
+                    {currentNode && <button onClick={() => { setModalMode('material'); setIsEditing(false); setMatForm({ title: '', url: '', type: 'pdf' }); setIsAdding(true); }} className="px-5 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">+ Media</button>}
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-4 py-3 bg-white/5 rounded-2xl border border-white/5 text-[9px] font-black uppercase tracking-widest">
-                <button onClick={() => setPath([])} className={path.length === 0 ? 'text-violet-500' : 'text-white/40'}>ROOT</button>
-                {path.map((p, i) => <React.Fragment key={p.id}><ChevronRight size={10} /><button onClick={() => setPath(path.slice(0, i + 1))} className={i === path.length - 1 ? 'text-violet-500' : 'text-white/40'}>{p.name}</button></React.Fragment>)}
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/5 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5 text-[9px] font-black uppercase tracking-widest">
+                <button onClick={() => setPath([])} className={path.length === 0 ? 'text-violet-500' : 'text-slate-400 dark:text-white/40'}>ROOT</button>
+                {path.map((p, i) => <React.Fragment key={p.id}><ChevronRight size={10} className="opacity-20"/><button onClick={() => setPath(path.slice(0, i + 1))} className={i === path.length - 1 ? 'text-violet-500' : 'text-slate-400 dark:text-white/40'}>{p.name}</button></React.Fragment>)}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {loading ? <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin mx-auto text-violet-500" /></div> : <>
                     {nodes.map(n => (
-                        <div key={n.id} onClick={() => setPath([...path, n])} className="bg-white/5 border border-white/10 rounded-2xl p-6 group cursor-pointer hover:border-violet-500/50 transition-all">
+                        <div key={n.id} onClick={() => setPath([...path, n])} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 group cursor-pointer hover:border-violet-500/50 transition-all shadow-sm">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg">{n.node_type === 'CLASS' ? '🏫' : '📂'}</div>
-                                    <div><h4 className="text-sm font-black uppercase">{n.name}</h4><p className="text-[8px] font-black opacity-30 tracking-widest">{n.node_type}</p></div>
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-lg">{n.node_type === 'CLASS' ? '🏫' : '📂'}</div>
+                                    <div><h4 className="text-sm font-black uppercase text-slate-900 dark:text-white">{n.name}</h4><p className="text-[8px] font-black opacity-30 tracking-widest uppercase">{n.node_type}</p></div>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingNode(n); setNodeForm({ name: n.name, type: n.node_type, category: (n.metadata as any)?.category || 'SECONDARY' }); setIsEditing(true); setModalMode('node'); setIsAdding(true); }} className="p-1.5 hover:text-violet-500"><Pencil size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); remove(n.id, true); }} className="p-1.5 hover:text-red-500"><Trash2 size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingNode(n); setNodeForm({ name: n.name, type: n.node_type, category: (n.metadata as any)?.category || 'SECONDARY' }); setIsEditing(true); setModalMode('node'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); remove(n.id, true); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                                 </div>
                             </div>
                         </div>
                     ))}
                     {materials.map(m => (
-                        <div key={m.id} className="bg-slate-900 border border-white/5 rounded-2xl p-6 group">
+                        <div key={m.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-6 group">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-violet-600/10 flex items-center justify-center text-lg">{m.type === 'pdf' ? '📄' : '🎬'}</div>
-                                    <div><h4 className="text-sm font-black uppercase line-clamp-1 max-w-[120px]">{m.title}</h4><p className="text-[8px] font-black opacity-30 tracking-widest">{m.type}</p></div>
+                                    <div><h4 className="text-sm font-black uppercase line-clamp-1 max-w-[120px] text-slate-900 dark:text-white">{m.title}</h4><p className="text-[8px] font-black opacity-30 tracking-widest uppercase">{m.type}</p></div>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button onClick={() => { setEditingMaterial(m); setMatForm(m); setIsEditing(true); setModalMode('material'); setIsAdding(true); }} className="p-1.5 hover:text-violet-500"><Pencil size={14} /></button>
-                                    <button onClick={() => remove(m.id, false)} className="p-1.5 hover:text-red-500"><Trash2 size={14} /></button>
+                                    <button onClick={() => { setEditingMaterial(m); setMatForm(m); setIsEditing(true); setModalMode('material'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
+                                    <button onClick={() => remove(m.id, false)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                                 </div>
                             </div>
                         </div>
@@ -261,24 +260,63 @@ const ContentView: React.FC = () => {
 
             <AnimatePresence>
                 {isAdding && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-black/60">
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="bg-[#0c0c14] border border-white/10 rounded-3xl p-8 max-w-sm w-full space-y-4 shadow-2xl">
-                            <h2 className="text-xs font-black uppercase tracking-widest mb-4">{isEditing ? 'Sync' : 'Initialize'} {modalMode}</h2>
-                            {modalMode === 'node' ? <div className="space-y-4">
-                                <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" placeholder="Name" value={nodeForm.name} onChange={e => setNodeForm({...nodeForm, name: e.target.value})} />
-                                {!isEditing && !currentNode && <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" value={nodeForm.type} onChange={e => setNodeForm({...nodeForm, type: e.target.value as NodeType})}>
-                                    <option value="CLASS">CLASS</option><option value="EXAM">EXAM</option>
-                                </select>}
-                                <button onClick={saveNode} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs">Execute Data Node</button>
-                            </div> : <div className="space-y-4">
-                                <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" value={matForm.type} onChange={e => setMatForm({...matForm, type: e.target.value as any})}>
-                                    <option value="pdf">PDF</option><option value="video">VIDEO</option>
-                                </select>
-                                <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" placeholder="Title" value={matForm.title} onChange={e => setMatForm({...matForm, title: e.target.value})} />
-                                <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" placeholder="URL" value={matForm.url} onChange={e => setMatForm({...matForm, url: e.target.value})} />
-                                <button onClick={saveMat} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs">Publish Media</button>
-                            </div>}
-                            <button onClick={() => { setIsAdding(false); setIsEditing(false); }} className="w-full text-[9px] font-black uppercase text-white/30 tracking-[0.2em]">Abort Process</button>
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#0c0c14] border border-slate-200 dark:border-white/10 rounded-3xl p-8 max-w-md w-full space-y-4 shadow-2xl">
+                            <h2 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Activity size={12} className="text-violet-500"/>
+                                {isEditing ? 'Sync System' : 'Initialize New'} {modalMode}
+                            </h2>
+                            
+                            {modalMode === 'node' ? (
+                                <div className="space-y-5">
+                                    {!isEditing && !currentNode && (
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Establish Primary Category</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button onClick={() => setNodeForm({...nodeForm, type: 'CLASS'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.type === 'CLASS' ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Academic Class</button>
+                                                <button onClick={() => setNodeForm({...nodeForm, type: 'EXAM'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.type === 'EXAM' ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Competitive Exam</button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {nodeForm.type === 'CLASS' && (
+                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
+                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Curriculum Level</label>
+                                            <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" value={nodeForm.category} onChange={e => setNodeForm({...nodeForm, category: e.target.value})}>
+                                                <option value="SECONDARY">Secondary (IX-X)</option>
+                                                <option value="SENIOR SECONDARY">Senior Secondary (XI-XII)</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Registry Name</label>
+                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-violet-500 transition-all" placeholder={nodeForm.type === 'CLASS' ? "e.g. Class 10" : "e.g. JEE Main"} value={nodeForm.name} onChange={e => setNodeForm({...nodeForm, name: e.target.value})} />
+                                    </div>
+                                    
+                                    <button onClick={saveNode} className="w-full py-4.5 bg-slate-900 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">Synchronize to Core</button>
+                                </div>
+                            ) : (
+                                <div className="space-y-5">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Media Format</label>
+                                        <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" value={matForm.type} onChange={e => setMatForm({...matForm, type: e.target.value as any})}>
+                                            <option value="pdf">Adobe PDF Document</option>
+                                            <option value="video">YouTube / Digital Video</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Asset Title</label>
+                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" placeholder="Module Title" value={matForm.title} onChange={e => setMatForm({...matForm, title: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Digital Link</label>
+                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" placeholder="https://..." value={matForm.url} onChange={e => setMatForm({...matForm, url: e.target.value})} />
+                                    </div>
+                                    <button onClick={saveMat} className="w-full py-4.5 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">Publish Resource</button>
+                                </div>
+                            )}
+                            <button onClick={() => { setIsAdding(false); setIsEditing(false); }} className="w-full text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] hover:text-red-500 transition-colors">Abort Terminal</button>
                         </motion.div>
                     </div>
                 )}
@@ -316,29 +354,29 @@ const SyllabusView: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Syllabus Engine</h1>
-            <div className="flex gap-2 p-1 bg-white/5 border border-white/10 rounded-2xl overflow-x-auto">
-                {classes.map(c => <button key={c.id} onClick={() => setSelectedId(c.id)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedId === c.id ? 'bg-violet-600 text-white' : 'text-white/40 hover:text-white'}`}>{c.name}</button>)}
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Syllabus Engine</h1>
+            <div className="flex gap-2 p-1 bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 rounded-2xl overflow-x-auto">
+                {classes.map(c => <button key={c.id} onClick={() => setSelectedId(c.id)} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedId === c.id ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>{c.name}</button>)}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {selectedId && <button onClick={() => { setModal('CHAPTER'); setParentId(null); setEditingNode(null); setForm({ name: '', order: chapters.length + 1 }); setIsAdding(true); }} className="col-span-full py-4 border border-dashed border-white/10 rounded-2xl text-[10px] font-black uppercase text-white/20 hover:text-violet-500 hover:border-violet-500/50 transition-all">+ Initialize New Chapter</button>}
+                {selectedId && <button onClick={() => { setModal('CHAPTER'); setParentId(null); setEditingNode(null); setForm({ name: '', order: chapters.length + 1 }); setIsAdding(true); }} className="col-span-full py-6 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-3xl text-[10px] font-black uppercase text-slate-300 dark:text-white/20 hover:text-violet-500 dark:hover:text-violet-500 hover:border-violet-500/50 transition-all flex items-center justify-center gap-2"><Plus size={16}/> Initialize New Chapter</button>}
                 {chapters.map(chap => (
-                    <div key={chap.id} className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-4 group">
+                    <div key={chap.id} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 space-y-4 group shadow-sm">
                         <div className="flex justify-between items-center">
-                            <h4 className="text-sm font-black uppercase">{chap.order_index}. {chap.name}</h4>
+                            <h4 className="text-sm font-black uppercase text-slate-900 dark:text-white">{chap.order_index}. {chap.name}</h4>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                <button onClick={() => { setModal('TOPIC'); setParentId(chap.id); setEditingNode(null); setForm({ name: '', order: (chap.children?.length || 0) + 1 }); setIsAdding(true); }} className="p-1.5 text-emerald-500"><Plus size={14} /></button>
-                                <button onClick={() => { setEditingNode(chap); setModal('CHAPTER'); setParentId(null); setForm({ name: chap.name, order: chap.order_index }); setIsAdding(true); }} className="p-1.5 text-violet-500"><Pencil size={14} /></button>
-                                <button onClick={() => remove(chap.id)} className="p-1.5 text-red-500"><Trash2 size={14} /></button>
+                                <button onClick={() => { setModal('TOPIC'); setParentId(chap.id); setEditingNode(null); setForm({ name: '', order: (chap.children?.length || 0) + 1 }); setIsAdding(true); }} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"><Plus size={14} /></button>
+                                <button onClick={() => { setEditingNode(chap); setModal('CHAPTER'); setParentId(null); setForm({ name: chap.name, order: chap.order_index }); setIsAdding(true); }} className="p-1.5 text-violet-500 hover:bg-violet-500/10 rounded-lg transition-colors"><Pencil size={14} /></button>
+                                <button onClick={() => remove(chap.id)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={14} /></button>
                             </div>
                         </div>
-                        <div className="pl-4 border-l border-white/10 space-y-2">
+                        <div className="pl-4 border-l-2 border-slate-100 dark:border-white/10 space-y-3">
                             {chap.children?.map(t => (
-                                <div key={t.id} className="flex justify-between text-[11px] font-bold text-white/40 group/t">
+                                <div key={t.id} className="flex justify-between text-[11px] font-bold text-slate-500 dark:text-white/40 group/t">
                                     <span>{t.order_index}. {t.name}</span>
                                     <div className="flex gap-2 opacity-0 group-hover/t:opacity-100 transition-all">
-                                        <button onClick={() => { setEditingNode(t); setModal('TOPIC'); setParentId(chap.id); setForm({ name: t.name, order: t.order_index }); setIsAdding(true); }}><Pencil size={12} /></button>
-                                        <button onClick={() => remove(t.id)} className="text-red-400"><Trash2 size={12} /></button>
+                                        <button onClick={() => { setEditingNode(t); setModal('TOPIC'); setParentId(chap.id); setForm({ name: t.name, order: t.order_index }); setIsAdding(true); }} className="hover:text-violet-500"><Pencil size={12} /></button>
+                                        <button onClick={() => remove(t.id)} className="text-red-400 hover:text-red-500"><Trash2 size={12} /></button>
                                     </div>
                                 </div>
                             ))}
@@ -347,13 +385,19 @@ const SyllabusView: React.FC = () => {
                 ))}
             </div>
             {isAdding && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#0c0c14] p-8 rounded-3xl w-full max-w-sm border border-white/10 space-y-4">
-                        <h2 className="text-xs font-black uppercase">{editingNode ? 'Edit' : 'Create'} {modal}</h2>
-                        <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" placeholder="Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
-                        <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white" type="number" value={form.order} onChange={e => setForm({...form, order: parseInt(e.target.value) || 1})} />
-                        <button onClick={save} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs">Commit Changes</button>
-                        <button onClick={() => setIsAdding(false)} className="w-full text-[9px] font-black uppercase text-white/20">Cancel</button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-[#0c0c14] p-8 rounded-3xl w-full max-w-sm border border-slate-200 dark:border-white/10 space-y-5 shadow-2xl">
+                        <h2 className="text-[10px] font-black uppercase text-slate-900 dark:text-white tracking-widest">{editingNode ? 'Sync' : 'Initialize'} {modal} Entry</h2>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Title</label>
+                            <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Sequence Order</label>
+                            <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" type="number" value={form.order} onChange={e => setForm({...form, order: parseInt(e.target.value) || 1})} />
+                        </div>
+                        <button onClick={save} className="w-full py-4.5 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">Authenticate Entry</button>
+                        <button onClick={() => setIsAdding(false)} className="w-full text-[9px] font-black uppercase text-slate-400">Cancel</button>
                     </div>
                 </div>
             )}
@@ -395,7 +439,7 @@ const DashboardContentView: React.FC = () => {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Dashboard Content</h1>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Dashboard Content</h1>
                     <p className="text-slate-400 text-xs font-black uppercase tracking-widest mt-1">Manage News, Alerts & Updates for the App</p>
                 </div>
                 <button onClick={() => { setForm({ title: '', content: '', type: 'NEWS', tag: '' }); setEditingItem(null); setIsAdding(true); }} className="px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">
@@ -404,33 +448,44 @@ const DashboardContentView: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {items.map(item => (
-                    <div key={item.id} className="bg-white/5 border border-white/10 rounded-3xl p-6 group shadow-sm">
+                    <div key={item.id} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 group shadow-sm transition-all hover:border-violet-500/30">
                         <div className="flex items-center justify-between mb-4">
                             <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${item.type === 'ALERT' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'}`}>
                                 {item.type}
                             </span>
                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                <button onClick={() => { setEditingItem(item); setForm(item); setIsAdding(true); }} className="p-2 text-violet-500"><Pencil size={14} /></button>
-                                <button onClick={() => handleDelete(item.id)} className="p-2 text-red-400"><Trash2 size={14} /></button>
+                                <button onClick={() => { setEditingItem(item); setForm(item); setIsAdding(true); }} className="p-2 text-violet-500 hover:bg-violet-500/10 rounded-lg"><Pencil size={14} /></button>
+                                <button onClick={() => handleDelete(item.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg"><Trash2 size={14} /></button>
                             </div>
                         </div>
-                        <h3 className="text-sm font-black text-white uppercase mb-2">{item.title}</h3>
-                        <p className="text-xs text-slate-500 line-clamp-2">{item.content}</p>
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase mb-2">{item.title}</h3>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{item.content}</p>
                     </div>
                 ))}
             </div>
             <AnimatePresence>
                 {isAdding && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/60">
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-[#0c0c14] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-4">
-                             <h2 className="text-sm font-black uppercase tracking-widest">Manage Item</h2>
-                             <select className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white" value={form.type} onChange={e => setForm({...form, type: e.target.value as any})}>
-                                <option value="NEWS">News</option><option value="ALERT">Alert</option><option value="UPDATE">Update</option>
-                             </select>
-                             <input className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-white" placeholder="Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
-                             <textarea className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs min-h-[100px] text-white" placeholder="Content" value={form.content} onChange={e => setForm({...form, content: e.target.value})} />
-                             <button onClick={handleSave} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs">Save Content</button>
-                             <button onClick={() => setIsAdding(false)} className="w-full text-[10px] font-black uppercase text-slate-400">Cancel</button>
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-[#0c0c14] border border-slate-200 dark:border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-5">
+                             <h2 className="text-[10px] font-black uppercase tracking-widest mb-4">Manage Entry Portal</h2>
+                             <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Content Type</label>
+                                <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white font-bold" value={form.type} onChange={e => setForm({...form, type: e.target.value as any})}>
+                                    <option value="NEWS">News Bulletin</option>
+                                    <option value="ALERT">Critical Alert</option>
+                                    <option value="UPDATE">System Update</option>
+                                </select>
+                             </div>
+                             <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Heading</label>
+                                <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" placeholder="Headline" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
+                             </div>
+                             <div className="space-y-1.5">
+                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Detail Report</label>
+                                <textarea className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs min-h-[120px] text-slate-900 dark:text-white font-medium" placeholder="Full Description..." value={form.content} onChange={e => setForm({...form, content: e.target.value})} />
+                             </div>
+                             <button onClick={handleSave} className="w-full py-4.5 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">Publish to Dashboard</button>
+                             <button onClick={() => setIsAdding(false)} className="w-full text-[9px] font-black uppercase text-slate-400">Cancel</button>
                         </motion.div>
                     </div>
                 )}
@@ -463,23 +518,23 @@ const SettingsView: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-black text-white uppercase tracking-tighter">Terminal Settings</h1>
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 max-w-2xl">
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Terminal Settings</h1>
+            <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-8 space-y-6 max-w-2xl shadow-sm">
                 <div className="flex items-center justify-between">
-                    <div><h3 className="text-sm font-black uppercase">Maintenance Mode</h3><p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Restrict client app access</p></div>
+                    <div><h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">Maintenance Mode</h3><p className="text-[10px] font-bold text-slate-400 dark:text-white/20 uppercase tracking-widest">Restrict client app access</p></div>
                     <button onClick={() => setSettings({...settings, is_active: !settings.is_active})} className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${settings.is_active ? 'bg-red-500/20 border-red-500/30' : 'bg-emerald-500/20 border-emerald-500/30'} border`}>
                         <motion.div animate={{ x: settings.is_active ? 24 : 0 }} className={`w-6 h-6 rounded-full ${settings.is_active ? 'bg-red-500' : 'bg-emerald-500'}`} />
                     </button>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-white/30">Broadcast Message</label>
-                    <textarea value={settings.message} onChange={e => setSettings({...settings, message: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm font-medium h-32 outline-none focus:border-violet-500/40 text-white" />
+                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-white/30">Broadcast Message</label>
+                    <textarea value={settings.message} onChange={e => setSettings({...settings, message: e.target.value})} className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm font-medium h-32 outline-none focus:border-violet-500/40 text-slate-900 dark:text-white" />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-white/30">Auto Re-open (Optional)</label>
-                    <input type="datetime-local" value={settings.reopen_at ? new Date(new Date(settings.reopen_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={e => setSettings({...settings, reopen_at: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white" />
+                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-white/30">Auto Re-open (Optional)</label>
+                    <input type="datetime-local" value={settings.reopen_at ? new Date(new Date(settings.reopen_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={e => setSettings({...settings, reopen_at: e.target.value})} className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white font-bold" />
                 </div>
-                <button onClick={handleSave} disabled={saving} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">{saving ? 'Syncing...' : 'Update Production Core'}</button>
+                <button onClick={handleSave} disabled={saving} className="w-full py-4.5 bg-slate-900 dark:bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">{saving ? 'Syncing...' : 'Update Production Core'}</button>
             </div>
         </div>
     );
@@ -497,17 +552,17 @@ const BannerManager: React.FC = () => {
     const remove = async (id: string) => { if (confirm('Delete?')) { await deleteStoreBanner(id); load(); } };
 
     return (
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-4">
-            <h3 className="text-sm font-black uppercase">Promotional Stream Banners</h3>
+        <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 space-y-4 shadow-sm">
+            <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">Promotional Stream Banners</h3>
             <div className="flex gap-3">
-                <input className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white" placeholder="Banner Image URL" value={url} onChange={e => setUrl(e.target.value)} />
-                <button onClick={add} className="px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Add</button>
+                <input className="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-slate-900 dark:text-white font-bold" placeholder="Banner Image URL" value={url} onChange={e => setUrl(e.target.value)} />
+                <button onClick={add} className="px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">Upload</button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {banners.map(b => (
-                    <div key={b.id} className="relative rounded-xl overflow-hidden aspect-video border border-white/10 shadow-sm transition-all hover:scale-105 group">
+                    <div key={b.id} className="relative rounded-xl overflow-hidden aspect-video border border-slate-200 dark:border-white/10 shadow-sm transition-all hover:scale-105 group">
                         <img src={b.image_url} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><button onClick={() => remove(b.id)} className="p-2 bg-red-500 rounded-lg"><Trash2 size={16} /></button></div>
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all"><button onClick={() => remove(b.id)} className="p-2 bg-red-500 rounded-lg text-white"><Trash2 size={16} /></button></div>
                     </div>
                 ))}
             </div>
@@ -532,22 +587,22 @@ const StoreView: React.FC = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Toppers Store</h1>
-                <button onClick={() => setIsAdding(true)} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercasetracking-widest shadow-lg">+ Add Product</button>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">Toppers Store</h1>
+                <button onClick={() => setIsAdding(true)} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">+ Add Product</button>
             </div>
             <BannerManager />
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {products.map(p => (
-                    <div key={p.id} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden group">
-                        <div className="aspect-[16/10] bg-white/5 relative">
+                    <div key={p.id} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl overflow-hidden group shadow-sm transition-all hover:shadow-md">
+                        <div className="aspect-[16/10] bg-slate-100 dark:bg-white/5 relative">
                             {p.image_url && <img src={p.image_url} className="w-full h-full object-cover" />}
                             <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest text-white border border-white/10">{p.category}</div>
                         </div>
                         <div className="p-6 space-y-4">
-                            <h3 className="text-sm font-black uppercase line-clamp-2">{p.name}</h3>
+                            <h3 className="text-sm font-black uppercase line-clamp-2 text-slate-900 dark:text-white">{p.name}</h3>
                             <div className="flex justify-between items-end">
-                                <div><p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Pricing</p><p className="text-xl font-black text-violet-500">₹{p.selling_price}</p></div>
-                                <button className="p-2 bg-white/5 rounded-xl hover:text-red-500 transition-all"><Trash2 size={14} /></button>
+                                <div><p className="text-[10px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest mb-1">Market Listing</p><p className="text-xl font-black text-violet-500">₹{p.selling_price}</p></div>
+                                <button className="p-2 bg-slate-100 dark:bg-white/5 rounded-xl hover:text-red-500 transition-all text-slate-400"><Trash2 size={14} /></button>
                             </div>
                         </div>
                     </div>
@@ -568,12 +623,13 @@ const AdminApp: React.FC = () => {
     const [view, setView] = useState<View>('dashboard');
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [isDark, setIsDark] = useState(() => localStorage.getItem('admin_theme') !== 'light');
 
     const load = useCallback(async () => {
         setLoading(true); try { const s = await fetchAdminStats(); setStats(s); } catch (_) { } setLoading(false);
     }, []);
 
+    useEffect(() => { localStorage.setItem('admin_theme', isDark ? 'dark' : 'light'); }, [isDark]);
     useEffect(() => { if (operator) load(); }, [operator, load]);
 
     const handleLogin = (op: Operator) => { setOperator(op); localStorage.setItem('op_session', JSON.stringify(op)); };
@@ -591,21 +647,28 @@ const AdminApp: React.FC = () => {
     ];
 
     return (
-        <div className="flex h-screen w-full bg-[#050510] text-white overflow-hidden">
-            <aside className="w-72 bg-[#07070f] border-r border-white/5 flex flex-col p-6 space-y-8">
+        <div className={`flex h-screen w-full overflow-hidden ${isDark ? 'dark bg-[#050510] text-white' : 'bg-slate-50 text-slate-900'}`}>
+            <aside className={`w-72 border-r flex flex-col p-6 space-y-8 transition-colors ${isDark ? 'bg-[#07070f] border-white/5' : 'bg-white border-slate-200'}`}>
                 <div className="flex items-center gap-3">
-                    <img src={LOGO_URL} className="w-10 h-10 rounded-xl" />
-                    <div><h2 className="text-sm font-black uppercase tracking-tighter">CBSE TOPPERS</h2><p className="text-[9px] font-black text-violet-500 uppercase tracking-widest mt-0.5">Terminal v3.0</p></div>
+                    <img src={LOGO_URL} className="w-10 h-10 rounded-xl shadow-lg" />
+                    <div><h2 className={`text-sm font-black uppercase tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>CBSE TOPPERS</h2><p className="text-[9px] font-black text-violet-500 uppercase tracking-widest mt-0.5">Terminal v3.0</p></div>
                 </div>
+                
                 <div className="flex-1 space-y-2">
-                    <p className="text-[8px] font-black text-white/10 uppercase tracking-[0.3em] mb-4">Command Core</p>
+                    <p className={`text-[8px] font-black uppercase tracking-[0.3em] mb-4 ${isDark ? 'text-white/10' : 'text-slate-300'}`}>Command Core</p>
                     {navItems.map(n => <SidebarItem key={n.id} {...n} active={view === n.id} onClick={() => setView(n.id)} />)}
                 </div>
-                <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"><LogOut size={16} /> Logout</button>
+
+                <div className="pt-4 space-y-2 border-t border-slate-100 dark:border-white/5">
+                    <button onClick={() => setIsDark(!isDark)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDark ? 'text-amber-400 bg-amber-400/10' : 'text-indigo-600 bg-indigo-50'}`}>
+                        {isDark ? <Sun size={14}/> : <Moon size={14}/>} {isDark ? 'Emulate Light' : 'Secure Dark'}
+                    </button>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"><LogOut size={16} /> Logout Terminal</button>
+                </div>
             </aside>
-            <main className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+            <main className={`flex-1 overflow-y-auto p-12 custom-scrollbar transition-colors ${isDark ? 'bg-[#050510]' : 'bg-slate-50'}`}>
                 <AnimatePresence mode="wait">
-                    <motion.div key={view} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
+                    <motion.div key={view} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.2 }}>
                         {view === 'dashboard' && <DashboardView stats={stats} operator={operator} onRefresh={load} loading={loading} setView={setView} />}
                         {view === 'content' && <ContentView />}
                         {view === 'syllabus' && <SyllabusView />}
