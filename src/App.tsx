@@ -151,7 +151,7 @@ const ContentView: React.FC = () => {
     const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
     const [modalMode, setModalMode] = useState<'node' | 'material'>('node');
 
-    const [nodeForm, setNodeForm] = useState<{ name: string; type: NodeType; category: string }>({ name: '', type: 'CLASS', category: 'SECONDARY' });
+    const [wizardData, setWizardData] = useState({ type: 'CLASS' as NodeType, category: 'SECONDARY' as 'SECONDARY' | 'SENIOR SECONDARY', name: '', sections: '', streams: '', subjects: '' });
     const [matForm, setMatForm] = useState<Partial<Material>>({ title: '', url: '', type: 'pdf' });
 
     const currentNode = path.length > 0 ? path[path.length - 1] : null;
@@ -163,13 +163,8 @@ const ContentView: React.FC = () => {
                 const [classes, exams] = await Promise.all([fetchNodes('CLASS', null), fetchNodes('EXAM', null)]);
                 setNodes([...classes, ...exams]); setMaterials([]);
             } else {
-                let nextTypes: NodeType[] = [];
-                if (currentNode.node_type === 'CLASS') nextTypes = (currentNode.metadata as any)?.category === 'SENIOR SECONDARY' ? ['STREAM'] : ['SECTION'];
-                else if (currentNode.node_type === 'STREAM') nextTypes = ['SECTION'];
-                else if (currentNode.node_type === 'SECTION' || currentNode.node_type === 'FOLDER') nextTypes = ['FOLDER'];
-
                 const [n, m] = await Promise.all([
-                    Promise.all(nextTypes.map(t => fetchNodes(t, currentNode.id))).then(res => res.flat()),
+                    fetchNodes(undefined, currentNode.id),
                     fetchMaterials(currentNode.id)
                 ]);
                 setNodes(n); setMaterials(m);
@@ -180,13 +175,47 @@ const ContentView: React.FC = () => {
     useEffect(() => { load(); }, [load]);
 
     const saveNode = async () => {
-        if (!nodeForm.name) return;
-        const payload = { name: nodeForm.name, node_type: isEditing ? editingNode!.node_type : nodeForm.type, parent_id: currentNode?.id || null, metadata: { category: nodeForm.category } };
+        if (!wizardData.name) return;
+        setLoading(true);
         try {
-            if (isEditing) await updateNode(editingNode!.id, payload);
-            else await createNode(payload);
-            setIsAdding(false); load();
-        } catch (_) { alert('Error'); }
+            if (isEditing) {
+                await updateNode(editingNode!.id, { name: wizardData.name, metadata: { category: wizardData.category } });
+            } else {
+                if (wizardData.type === 'EXAM') {
+                    await createNode({ name: wizardData.name, node_type: 'EXAM', parent_id: null, metadata: {} });
+                } else if (wizardData.type === 'CLASS') {
+                    const classNode = await createNode({ name: wizardData.name, node_type: 'CLASS', parent_id: null, metadata: { category: wizardData.category } });
+                    
+                    const sectionsList = wizardData.sections.split(',').map(s => s.trim()).filter(Boolean);
+                    const subjectsList = wizardData.subjects.split(',').map(s => s.trim()).filter(Boolean);
+                    
+                    if (wizardData.category === 'SECONDARY') {
+                        const secsFolder = await createNode({ name: 'Sections', node_type: 'FOLDER', parent_id: classNode.id, metadata: {} });
+                        for (const sec of sectionsList) {
+                            const secNode = await createNode({ name: `Section ${sec}`, node_type: 'SECTION', parent_id: secsFolder.id, metadata: {} });
+                            for (const sub of subjectsList) {
+                                await createNode({ name: sub, node_type: 'FOLDER', parent_id: secNode.id, metadata: {} });
+                            }
+                        }
+                    } else {
+                        const streamsList = wizardData.streams.split(',').map(s => s.trim()).filter(Boolean);
+                        const streamsFolder = await createNode({ name: 'Streams', node_type: 'FOLDER', parent_id: classNode.id, metadata: {} });
+                        for (const stream of streamsList) {
+                            const streamNode = await createNode({ name: stream, node_type: 'STREAM', parent_id: streamsFolder.id, metadata: {} });
+                            const secsFolderForStream = await createNode({ name: 'Sections', node_type: 'FOLDER', parent_id: streamNode.id, metadata: {} });
+                            for (const sec of sectionsList) {
+                                const secNode = await createNode({ name: `Section ${sec}`, node_type: 'SECTION', parent_id: secsFolderForStream.id, metadata: {} });
+                                for (const sub of subjectsList) {
+                                    await createNode({ name: sub, node_type: 'FOLDER', parent_id: secNode.id, metadata: {} });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            setIsAdding(false); 
+            load();
+        } catch (e) { console.error(e); alert('Error generating structure'); } finally { setLoading(false); }
     };
 
     const saveMat = async () => {
@@ -215,27 +244,20 @@ const ContentView: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    {(!currentNode || (currentNode.node_type !== 'EXAM' && currentNode.node_type !== 'FOLDER')) && (
+                    {!currentNode && (
                         <button 
                             onClick={() => { 
-                                const isSeniorSecondary = currentNode?.node_type === 'CLASS' && (currentNode.metadata as any)?.category === 'SENIOR SECONDARY';
-                                const isSecondary = currentNode?.node_type === 'CLASS' && (currentNode.metadata as any)?.category === 'SECONDARY';
-                                
                                 setModalMode('node'); 
                                 setIsEditing(false); 
-                                setNodeForm({ 
-                                    name: '', 
-                                    type: currentNode ? (isSeniorSecondary ? 'STREAM' : (isSecondary ? 'SECTION' : (currentNode.node_type === 'STREAM' ? 'SECTION' : 'FOLDER'))) : 'CLASS', 
-                                    category: 'SECONDARY' 
-                                }); 
+                                setWizardData({ type: 'CLASS', category: 'SECONDARY', name: '', sections: '', streams: '', subjects: '' }); 
                                 setIsAdding(true); 
                             }} 
                             className="px-5 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all"
                         >
-                            + {currentNode ? 'Structure Node' : 'Root Folder'}
+                            + Generate Hierarchy
                         </button>
                     )}
-                    {currentNode && <button onClick={() => { setModalMode('material'); setIsEditing(false); setMatForm({ title: '', url: '', type: 'pdf' }); setIsAdding(true); }} className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all">+ Media</button>}
+                    {currentNode && <button onClick={() => { setModalMode('material'); setIsEditing(false); setMatForm({ title: '', url: '', type: 'pdf' }); setIsAdding(true); }} className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all">+ Media Asset</button>}
                 </div>
             </div>
 
@@ -259,7 +281,7 @@ const ContentView: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingNode(n); setNodeForm({ name: n.name, type: n.node_type, category: (n.metadata as any)?.category || 'SECONDARY' }); setIsEditing(true); setModalMode('node'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingNode(n); setWizardData({ type: n.node_type, category: (n.metadata as any)?.category || 'SECONDARY', name: n.name, sections: '', streams: '', subjects: '' }); setIsEditing(true); setModalMode('node'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
                                     <button onClick={(e) => { e.stopPropagation(); remove(n.id, true); }} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                                 </div>
                             </div>
@@ -293,47 +315,59 @@ const ContentView: React.FC = () => {
                             
                             {modalMode === 'node' ? (
                                 <div className="space-y-5">
-                                    {!isEditing && !currentNode && (
+                                    {!isEditing && (
                                         <>
                                             <div className="space-y-1.5">
                                                 <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Select Type</label>
                                                 <div className="grid grid-cols-2 gap-2">
-                                                    <button onClick={() => setNodeForm({...nodeForm, type: 'CLASS', category: 'SECONDARY'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.type === 'CLASS' ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Class</button>
-                                                    <button onClick={() => setNodeForm({...nodeForm, type: 'EXAM', category: 'EXAM'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.type === 'EXAM' ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Competitive Exam</button>
+                                                    <button onClick={() => setWizardData({...wizardData, type: 'CLASS', category: 'SECONDARY'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${wizardData.type === 'CLASS' ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Class</button>
+                                                    <button onClick={() => setWizardData({...wizardData, type: 'EXAM'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${wizardData.type === 'EXAM' ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Competitive Exam</button>
                                                 </div>
                                             </div>
                                             
-                                            {nodeForm.type === 'CLASS' && (
+                                            {wizardData.type === 'CLASS' && (
                                                 <div className="space-y-1.5 mt-4">
                                                     <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Select Category</label>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        <button onClick={() => setNodeForm({...nodeForm, category: 'SECONDARY'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.category === 'SECONDARY' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Secondary</button>
-                                                        <button onClick={() => setNodeForm({...nodeForm, category: 'SENIOR SECONDARY'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.category === 'SENIOR SECONDARY' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Senior Secondary</button>
+                                                        <button onClick={() => setWizardData({...wizardData, category: 'SECONDARY'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${wizardData.category === 'SECONDARY' ? 'bg-blue-600 border-blue-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Secondary</button>
+                                                        <button onClick={() => setWizardData({...wizardData, category: 'SENIOR SECONDARY'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${wizardData.category === 'SENIOR SECONDARY' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>Senior Secondary</button>
                                                     </div>
                                                 </div>
                                             )}
                                         </>
                                     )}
 
-                                    {currentNode && (
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">Creation Context</label>
-                                            <div className="px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">
-                                                {nodeForm.type === 'STREAM' && `Create Streams (e.g. Science, Commerce, Arts) inside ${currentNode.name}`}
-                                                {nodeForm.type === 'SECTION' && `Create Sections (e.g. A, B, C) inside ${currentNode.name}`}
-                                                {nodeForm.type === 'FOLDER' && `Add Subjects (e.g. Maths, Science, English) inside ${currentNode.name}`}
-                                            </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">
+                                            {wizardData.type === 'CLASS' ? (isEditing ? 'Class Name' : 'Enter Class Name') : 'Enter Exam Name'}
+                                        </label>
+                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-950 dark:text-white outline-none focus:border-violet-500 transition-all placeholder:text-slate-300" placeholder={wizardData.type === 'CLASS' ? 'e.g. Class 10' : 'e.g. JEE, NEET, UPSC'} value={wizardData.name} onChange={e => setWizardData({...wizardData, name: e.target.value})} />
+                                    </div>
+
+                                    {!isEditing && wizardData.type === 'CLASS' && wizardData.category === 'SENIOR SECONDARY' && (
+                                        <div className="space-y-1.5 mt-4">
+                                            <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">Create Streams (Comma separated)</label>
+                                            <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-950 dark:text-white outline-none focus:border-violet-500 transition-all placeholder:text-slate-300" placeholder="e.g. Science, Commerce, Arts" value={wizardData.streams} onChange={e => setWizardData({...wizardData, streams: e.target.value})} />
                                         </div>
                                     )}
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">
-                                            {!currentNode ? (nodeForm.type === 'CLASS' ? 'Enter Class Name' : 'Enter Exam Name') : (nodeForm.type === 'STREAM' ? 'Stream Name' : nodeForm.type === 'SECTION' ? 'Section Name' : 'Subject Name')}
-                                        </label>
-                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-950 dark:text-white outline-none focus:border-violet-500 transition-all placeholder:text-slate-300" placeholder={!currentNode ? (nodeForm.type === 'CLASS' ? 'e.g. Class 10' : 'e.g. JEE, NEET, UPSC') : (nodeForm.type === 'STREAM' ? 'e.g. Science, Commerce, Arts' : nodeForm.type === 'SECTION' ? 'e.g. Section A, Section B' : 'e.g. Maths, Science, English')} value={nodeForm.name} onChange={e => setNodeForm({...nodeForm, name: e.target.value})} />
-                                    </div>
+                                    {!isEditing && wizardData.type === 'CLASS' && (
+                                        <div className="space-y-1.5 mt-4">
+                                            <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">Create Sections (Comma separated)</label>
+                                            <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-950 dark:text-white outline-none focus:border-violet-500 transition-all placeholder:text-slate-300" placeholder="e.g. A, B, C" value={wizardData.sections} onChange={e => setWizardData({...wizardData, sections: e.target.value})} />
+                                        </div>
+                                    )}
+
+                                    {!isEditing && wizardData.type === 'CLASS' && (
+                                        <div className="space-y-1.5 mt-4">
+                                            <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">Add Subjects for each Section (Comma separated)</label>
+                                            <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-950 dark:text-white outline-none focus:border-violet-500 transition-all placeholder:text-slate-300" placeholder="e.g. Maths, Science, English" value={wizardData.subjects} onChange={e => setWizardData({...wizardData, subjects: e.target.value})} />
+                                        </div>
+                                    )}
                                     
-                                    <button onClick={saveNode} className="w-full py-4.5 bg-slate-950 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 hover:bg-violet-700 dark:hover:bg-violet-500 transition-all">Synchronize Entry</button>
+                                    <button onClick={saveNode} disabled={loading} className="w-full py-4.5 bg-slate-950 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 hover:bg-violet-700 dark:hover:bg-violet-500 transition-all">
+                                        {isEditing ? 'Synchronize Entry' : 'Generate Full Hierarchy'}
+                                    </button>
                                 </div>
                             ) : (
                                 <div className="space-y-5">
