@@ -979,7 +979,8 @@ const ContentView: React.FC = () => {
                                         <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
                                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">Step 1: Choose Primary Target Context</p>
                                             <div className="grid grid-cols-2 gap-4">
-                                                {['CBSE', 'JEE', 'NEET', 'CUET'].map(target => (
+                                                {/* CBSE is always first, then map others from database */}
+                                                {['CBSE', ...exams.map(e => e.name)].map(target => (
                                                     <button
                                                         key={target}
                                                         onClick={() => {
