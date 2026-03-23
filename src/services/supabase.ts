@@ -259,17 +259,17 @@ export const fetchAdminStats = async () => {
     };
 };
 
-export const fetchClasses = async (): Promise<{id: string, name: string}[]> => {
-    const { data } = await supabase.from('classes').select('id, name').order('id');
+export const fetchClasses = async (): Promise<{id: string, name: string, class_type?: string}[]> => {
+    const { data } = await supabase.from('classes').select('*').order('id');
     return data || [];
 };
 
-export const addClass = async (name: string) => {
-    await supabase.from('classes').insert({ name });
+export const addClass = async (name: string, type?: string) => {
+    await supabase.from('classes').insert({ name, class_type: type });
 };
 
-export const updateClass = async (id: string, name: string) => {
-    await supabase.from('classes').update({ name }).eq('id', id);
+export const updateClass = async (id: string, name: string, type?: string) => {
+    await supabase.from('classes').update({ name, class_type: type }).eq('id', id);
 };
 
 export const deleteClass = async (id: string) => {

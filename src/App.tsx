@@ -20,9 +20,9 @@ import {
     fetchStoreProducts, createStoreProduct, deleteStoreProduct, updateStoreProduct,
     fetchStoreBanners, createStoreBanner, deleteStoreBanner,
     fetchSubscriptionPlans, updateSubscriptionPlan,
-    fetchClasses, addClass, deleteClass, 
-    fetchExams, addExam, deleteExam,
-    fetchStreams, addStream, deleteStream,
+    fetchClasses, addClass, deleteClass, updateClass,
+    fetchExams, addExam, deleteExam, updateExam,
+    fetchStreams, addStream, deleteStream, updateStream,
     fetchClassStreams, linkStreamToClass, unlinkStreamFromClass,
     Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct, StoreBanner, SubscriptionPlan
 } from './services/supabase';
@@ -672,13 +672,12 @@ const OperatorsView: React.FC<{ currentOperator: Operator }> = ({ currentOperato
 // CONTENT MANAGER VIEW (STRICT REBUILD)
 // ─────────────────────────────────────────────────────────────────────
 const ContentView: React.FC = () => {
-    const [view, setView] = useState<'subjects' | 'folders'>('subjects');
+    const [view, setView] = useState<'sections' | 'folders'>('sections');
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [currentSubject, setCurrentSubject] = useState<Subject | null>(null);
     const [path, setPath] = useState<Folder[]>([]);
     const [folders, setFolders] = useState<Folder[]>([]);
     const [materials, setMaterials] = useState<Material[]>([]);
-    const [downloading, setDownloading] = useState<string | null>(null);
     const [navLevel, setNavLevel] = useState<'root' | 'classes' | 'streams' | 'sections' | 'exams' | 'exam-sections' | 'content'>('root');
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
     const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
@@ -689,344 +688,148 @@ const ContentView: React.FC = () => {
     const [filterExam, setFilterExam] = useState('');
     const [creationStep, setCreationStep] = useState(0); 
     const [targetType, setTargetType] = useState<string>(''); 
-
-    const handleDownload = async (url: string, title: string) => {
-        if (downloading) return;
-        setDownloading(url);
-        try {
-            // Google Drive direct download link replacement
-            let downloadUrl = url;
-            if (url.includes('drive.google.com')) {
-                downloadUrl = url.replace(/\/preview$/, '/view').replace(/\/view(\?.*)?$/, '/view?export=download');
-            }
-
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = `${title}.pdf`;
-            link.target = '_blank';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (e) {
-            console.error('Download failed', e);
-        } finally {
-            setDownloading(null);
-        }
-    };
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    // Form states
-    const [subForm, setSubForm] = useState<Partial<Subject>>({
-        tag: '',
-        target_classes: [],
-        target_streams: [],
-        target_exams: [],
-        icon_url: '/assets/subjects/relativity.png'
-    });
+    const [subForm, setSubForm] = useState<Partial<Subject>>({ tag: '', target_classes: [], target_streams: [], target_exams: [], icon_url: '' });
     const [folderForm, setFolderForm] = useState({ name: '' });
     const [materialForm, setMaterialForm] = useState<Partial<Material>>({ type: 'pdf', title: '', url: '' });
     const [addType, setAddType] = useState<'subfolder' | 'pdf' | 'image' | 'video'>('subfolder');
 
-    const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+    const [classes, setClasses] = useState<{ id: string; name: string; class_type?: string }[]>([]);
     const [exams, setExams] = useState<{ id: string; name: string }[]>([]);
     const [streams, setStreams] = useState<{ id: string; name: string }[]>([]);
     const [classStreams, setClassStreams] = useState<{ class_id: string; stream_id: string }[]>([]);
 
+    const [classForm, setClassForm] = useState({ name: '', class_type: 'SECONDARY' });
+    const [streamForm, setStreamForm] = useState({ name: '' });
+    const [examForm, setExamForm] = useState({ name: '' });
+    const [modalMode, setModalMode] = useState<'subject' | 'folder' | 'material' | 'class' | 'stream' | 'exam'>('subject');
+
     const loadSubjects = useCallback(async () => {
         setLoading(true);
         try {
-            const [data, clsData, exmData, stmData, mapData] = await Promise.all([
-                fetchSubjects(),
-                fetchClasses(),
-                fetchExams(),
-                fetchStreams(),
-                fetchClassStreams()
-            ]);
-            setSubjects(data);
-            setClasses(clsData);
-            setExams(exmData);
-            setStreams(stmData);
-            setClassStreams(mapData);
-        } catch (_) { }
-        setLoading(false);
+            const [data, clsData, exmData, stmData, mapData] = await Promise.all([ fetchSubjects(), fetchClasses(), fetchExams(), fetchStreams(), fetchClassStreams() ]);
+            setSubjects(data); setClasses(clsData); setExams(exmData); setStreams(stmData); setClassStreams(mapData);
+        } catch (_) { } setLoading(false);
     }, []);
 
     const loadFolderContent = useCallback(async (subjectId: string, parentId: string | null) => {
         setLoading(true);
         try {
-            const [f, m] = await Promise.all([
-                fetchFolders(subjectId, parentId),
-                fetchMaterials(subjectId, parentId)
-            ]);
-            setFolders(f);
-            setMaterials(m);
-        } catch (_) { }
-        setLoading(false);
+            const [f, m] = await Promise.all([ fetchFolders(subjectId, parentId), fetchMaterials(subjectId, parentId) ]);
+            setFolders(f); setMaterials(m);
+        } catch (_) { } setLoading(false);
     }, []);
 
     useEffect(() => { loadSubjects(); }, [loadSubjects]);
 
     const handleAddSubject = async () => {
         if (!subForm.name || !subForm.code) return alert('Name and Code required');
-        
-        const hasClasses = subForm.target_classes && subForm.target_classes.length > 0;
-        const hasExams = subForm.target_exams && subForm.target_exams.length > 0;
-        
-        if (!hasClasses && !hasExams) return alert('Target selection mandatory: Select at least one school class or competitive exam');
-
-        const finalData = { ...subForm };
-
         try {
-            if (isEditing && editingId) {
-                await updateSubject(editingId, finalData);
-            } else {
-                await createSubject({ ...finalData, order_index: subjects.length });
-            }
-            setIsAdding(false);
-            setIsEditing(false);
-            setEditingId(null);
-            loadSubjects();
-        } catch (e: any) { alert(e.message || 'Error saving subject'); }
+            if (isEditing && editingId) await updateSubject(editingId, subForm);
+            else await createSubject({ ...subForm, order_index: subjects.length });
+            setIsAdding(false); loadSubjects();
+        } catch (e: any) { alert('Error saving'); }
     };
 
     const handleAddFolder = async () => {
         if (!folderForm.name || !currentSubject) return;
         try {
-            if (isEditing && editingId) {
-                await updateFolder(editingId, { name: folderForm.name });
-            } else {
-                await createFolder({
-                    subject_id: currentSubject.id,
-                    parent_id: path[path.length - 1]?.id || null,
-                    name: folderForm.name,
-                    order_index: folders.length
-                });
-            }
-            setFolderForm({ name: '' });
-            setIsAdding(false);
-            setIsEditing(false);
-            setEditingId(null);
-            loadFolderContent(currentSubject.id, path[path.length - 1]?.id || null);
-        } catch (_) { alert('Error saving folder'); }
+            if (isEditing && editingId) await updateFolder(editingId, { name: folderForm.name });
+            else await createFolder({ subject_id: currentSubject.id, parent_id: path[path.length - 1]?.id || null, name: folderForm.name, order_index: folders.length });
+            setFolderForm({ name: '' }); setIsAdding(false); loadFolderContent(currentSubject.id, path[path.length - 1]?.id || null);
+        } catch (_) { alert('Error'); }
     };
 
     const handleAddMaterial = async () => {
-        const parentFolder = path[path.length - 1];
         if (!currentSubject || !materialForm.title || !materialForm.url) return alert('Fill all fields');
-
         let finalUrl = materialForm.url;
         if (finalUrl.includes('drive.google.com')) {
             finalUrl = finalUrl.replace(/\/view(\?.*)?$/, '/preview');
             if (finalUrl.includes('/d/')) {
                 const parts = finalUrl.split('/d/');
-                if (parts[1] && !parts[1].includes('/preview')) {
-                    const fileId = parts[1].split('/')[0];
-                    finalUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-                }
+                if (parts[1]) { const fileId = parts[1].split('/')[0]; finalUrl = `https://drive.google.com/file/d/${fileId}/preview`; }
             }
         }
-
         try {
-            if (isEditing && editingId) {
-                await updateMaterial(editingId, { ...materialForm, url: finalUrl });
-            } else {
-                await createMaterial({
-                    ...materialForm,
-                    url: finalUrl,
-                    subject_id: currentSubject.id,
-                    folder_id: parentFolder?.id || null,
-                    order_index: materials.length
-                });
-            }
-            setMaterialForm({ type: 'pdf', title: '', url: '' });
-            setIsAdding(false);
-            setIsEditing(false);
-            setEditingId(null);
-            loadFolderContent(currentSubject.id, parentFolder?.id || null);
-        } catch (_) { alert('Error saving material'); }
+            if (isEditing && editingId) await updateMaterial(editingId, { ...materialForm, url: finalUrl });
+            else await createMaterial({ ...materialForm, url: finalUrl, subject_id: currentSubject.id, folder_id: path[path.length - 1]?.id || null, order_index: materials.length });
+            setMaterialForm({ type: 'pdf', title: '', url: '' }); setIsAdding(false); loadFolderContent(currentSubject.id, path[path.length - 1]?.id || null);
+        } catch (_) { alert('Error'); }
     };
 
-    // Nav-level structural management
-    const handleNavAddClass = async () => {
-        const name = prompt('Enter New Class Name:');
-        if (!name) return;
-        try { await addClass(name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-    const handleNavEditClass = async (id: string, old: string) => {
-        const name = prompt('Update Class Name:', old);
-        if (!name || name === old) return;
-        try { await updateClass(id, name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-    const handleNavDeleteClass = async (id: string) => {
-        if (!confirm('Are you sure? This will hide linked content.')) return;
-        try { await deleteClass(id); loadSubjects(); } catch (_) { alert('Error'); }
-    };
+    const handleNavAddClass = () => { setIsEditing(false); setEditingId(null); setClassForm({ name: '', class_type: 'SECONDARY' }); setModalMode('class'); setIsAdding(true); };
+    const handleNavEditClass = (id: string, name: string, type?: string) => { setIsEditing(true); setEditingId(id); setClassForm({ name, class_type: type || 'SECONDARY' }); setModalMode('class'); setIsAdding(true); };
+    const handleNavAddExam = () => { setIsEditing(false); setEditingId(null); setExamForm({ name: '' }); setModalMode('exam'); setIsAdding(true); };
+    const handleNavEditExam = (id: string, name: string) => { setIsEditing(true); setEditingId(id); setExamForm({ name }); setModalMode('exam'); setIsAdding(true); };
+    const handleNavAddStream = () => { setIsEditing(false); setEditingId(null); setStreamForm({ name: '' }); setModalMode('stream'); setIsAdding(true); };
+    const handleNavEditStream = (id: string, name: string) => { setIsEditing(true); setEditingId(id); setStreamForm({ name }); setModalMode('stream'); setIsAdding(true); };
 
-    const handleNavAddStream = async () => {
-        const name = prompt('Enter New Stream Name:');
-        if (!name) return;
-        try { await addStream(name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-    const handleNavEditStream = async (id: string, old: string) => {
-        const name = prompt('Update Stream Name:', old);
-        if (!name || name === old) return;
-        try { await updateStream(id, name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-    const handleNavDeleteStream = async (id: string) => {
-        if (!confirm('Are you sure?')) return;
-        try { await deleteStream(id); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-
-    const handleNavAddExam = async () => {
-        const name = prompt('Enter New Exam Name:');
-        if (!name) return;
-        try { await addExam(name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-    const handleNavEditExam = async (id: string, old: string) => {
-        const name = prompt('Update Exam Name:', old);
-        if (!name || name === old) return;
-        try { await updateExam(id, name.trim()); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-    const handleNavDeleteExam = async (id: string) => {
-        if (!confirm('Are you sure?')) return;
-        try { await deleteExam(id); loadSubjects(); } catch (_) { alert('Error'); }
-    };
-
-    const startEditSubject = (s: Subject) => {
-        setSubForm(s);
-        setEditingId(s.id);
-        setIsEditing(true);
-        // Determine targetType from metadata
-        const hasExams = s.target_exams && s.target_exams.length > 0;
-        setTargetType(hasExams ? (s.target_exams?.[0] || '') : 'CBSE');
-        setCreationStep(1);
-        setIsAdding(true);
-    };
-
-    const startEditFolder = (f: Folder) => {
-        setFolderForm({ name: f.name });
-        setEditingId(f.id);
-        setAddType('subfolder');
-        setIsEditing(true);
-        setIsAdding(true);
-    };
-
-    const startEditMaterial = (m: Material) => {
-        setMaterialForm({ title: m.title, url: m.url, type: m.type });
-        setEditingId(m.id);
-        setAddType(m.type as any);
-        setIsEditing(true);
-        setIsAdding(true);
-    };
-
-    const handleReorder = async (type: 'subject' | 'folder' | 'material', direction: 'up' | 'down', item: any) => {
-        let list: any[] = [];
-        if (type === 'subject') list = subjects;
-        else if (type === 'folder') list = folders;
-        else list = materials;
-
-        const idx = list.findIndex(i => i.id === item.id);
-        if (direction === 'up' && idx === 0) return;
-        if (direction === 'down' && idx === list.length - 1) return;
-
-        const otherIdx = direction === 'up' ? idx - 1 : idx + 1;
-        const otherItem = list[otherIdx];
-
-        const tempIndex = item.order_index;
-        const newItemOrder = otherItem.order_index;
-        const newOtherOrder = tempIndex;
-
+    const saveClass = async () => {
+        if (!classForm.name) return;
         try {
-            if (type === 'subject') {
-                await Promise.all([updateSubject(item.id, { order_index: newItemOrder }), updateSubject(otherItem.id, { order_index: newOtherOrder })]);
-                loadSubjects();
-            } else if (type === 'folder') {
-                await Promise.all([updateFolder(item.id, { order_index: newItemOrder }), updateFolder(otherItem.id, { order_index: newOtherOrder })]);
-                loadFolderContent(currentSubject!.id, path[path.length - 1]?.id || null);
-            } else {
-                await Promise.all([updateMaterial(item.id, { order_index: newItemOrder }), updateMaterial(otherItem.id, { order_index: newOtherOrder })]);
-                loadFolderContent(currentSubject!.id, path[path.length - 1]?.id || null);
+            if (isEditing && editingId) await updateClass(editingId, classForm.name, classForm.class_type);
+            else await addClass(classForm.name, classForm.class_type);
+            setIsAdding(false); loadSubjects();
+        } catch (_) { alert('Error'); }
+    };
+
+    const saveStream = async () => {
+        if (!streamForm.name) return;
+        try {
+            if (isEditing && editingId) await updateStream(editingId, streamForm.name);
+            else {
+                let sId = streams.find(s => s.name.toLowerCase() === streamForm.name.toLowerCase())?.id;
+                if (!sId) { const res = await supabase.from('streams').insert({ name: streamForm.name }).select().single(); if (res.data) sId = (res.data as any).id; }
+                if (sId && selectedClassId) await linkStreamToClass(selectedClassId, sId);
             }
-        } catch (_) { alert('Ordering Failed'); }
+            setIsAdding(false); loadSubjects();
+        } catch (_) { alert('Error'); }
     };
 
-    const drillDownSubject = (s: Subject) => {
-        setCurrentSubject(s);
-        setPath([]);
-        setView('folders');
-        loadFolderContent(s.id, null);
+    const saveExam = async () => {
+        if (!examForm.name) return;
+        try {
+            if (isEditing && editingId) await updateExam(editingId, examForm.name);
+            else await addExam(examForm.name);
+            setIsAdding(false); loadSubjects();
+        } catch (_) { alert('Error'); }
     };
 
-    const drillDownFolder = (f: Folder) => {
-        setPath([...path, f]);
-        loadFolderContent(currentSubject!.id, f.id);
-    };
+    const startEditSubject = (s: Subject) => { setSubForm(s); setEditingId(s.id); setModalMode('subject'); setTargetType(s.target_exams?.length ? s.target_exams[0] : 'CBSE'); setCreationStep(1); setIsEditing(true); setIsAdding(true); };
+    const startEditFolder = (f: Folder) => { setFolderForm({ name: f.name }); setEditingId(f.id); setModalMode('folder'); setIsEditing(true); setIsAdding(true); };
+    const startEditMaterial = (m: Material) => { setMaterialForm({ title: m.title, url: m.url, type: m.type }); setEditingId(m.id); setModalMode('material'); setAddType(m.type as any); setIsEditing(true); setIsAdding(true); };
 
-    const navigateTo = (f: Folder, idx: number) => {
-        const newPath = path.slice(0, idx + 1);
-        setPath(newPath);
-        loadFolderContent(currentSubject!.id, f.id);
-    };
+    const drillDownFolder = (f: Folder) => { setPath([...path, f]); loadFolderContent(currentSubject!.id, f.id); };
 
-    const navigateRoot = () => {
-        setPath([]);
-        loadFolderContent(currentSubject!.id, null);
-    };
+    const handleNavDeleteClass = async (id: string) => { if (confirm('Delete class?')) await deleteClass(id).then(loadSubjects); };
+    const handleNavDeleteExam = async (id: string) => { if (confirm('Delete exam?')) await deleteExam(id).then(loadSubjects); };
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-                        {view === 'subjects' ? 'Subjects Portal' : (
-                            <div className="flex items-center gap-3">
-                                <span>{currentSubject?.name}</span>
-                                {currentSubject?.tag && (
-                                    <span className="text-[9px] px-2 py-0.5 bg-violet-500/10 text-violet-500 rounded font-black uppercase tracking-widest">{currentSubject.tag}</span>
-                                )}
-                            </div>
-                        )}
+                        {view === 'sections' ? 'Sections Selection' : <span>{currentSubject?.name}</span>}
                     </h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        {view === 'folders' && (
-                            <button onClick={() => { setView('subjects'); setCurrentSubject(null); }} className="text-[10px] font-black text-violet-500 uppercase flex items-center gap-1 hover:underline">
-                                <ChevronRight size={12} className="rotate-180" /> Subjects
-                            </button>
-                        )}
-                        <p className="text-slate-900/30 dark:text-white/30 text-sm font-medium">
-                            {view === 'subjects' ? 'Define core and additional project structures.' : 'Manage folders and materials hierarchy.'}
-                        </p>
-                    </div>
                 </div>
-                {view === 'subjects' ? (
-                    <button onClick={() => { 
-                        setIsEditing(false); 
-                        setEditingId(null); 
-                        const clsName = classes.find(c => c.id === selectedClassId)?.name;
-                        const stmName = streams.find(st => st.id === selectedStreamId)?.name;
-                        const exmName = exams.find(ex => ex.id === selectedExamId)?.name;
-                        setSubForm({ 
-                            name: '', 
-                            code: '', 
-                            tag: '', 
-                            target_classes: clsName ? [clsName] : [], 
-                            target_streams: stmName ? [stmName] : [], 
-                            target_exams: exmName ? [exmName] : [], 
-                            icon_url: '' 
-                        }); 
-                        setTargetType(clsName ? 'CBSE' : (exmName ? exmName : ''));
-                        setCreationStep((clsName || exmName) ? 1 : 0);
-                        setIsAdding(true); 
+                {view === 'sections' ? (
+                    <button onClick={() => {
+                        if (navLevel === 'root') return setNavLevel('classes');
+                        if (navLevel === 'classes') return handleNavAddClass();
+                        if (navLevel === 'exams') return handleNavAddExam();
+                        if (navLevel === 'streams') return handleNavAddStream();
+                        setSubForm({ tag: '', target_classes: [], target_streams: [], target_exams: [], icon_url: '' });
+                        setIsEditing(false); setEditingId(null); setModalMode('subject'); setCreationStep(0); setIsAdding(true);
                     }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
-                        <Plus size={14} /> New Subject
+                        <Plus size={14} /> {navLevel === 'classes' ? 'Add Class' : navLevel === 'exams' ? 'Add Exam' : navLevel === 'streams' ? 'Add Stream' : 'Add New Section'}
                     </button>
                 ) : (
-                    <button onClick={() => { setIsEditing(false); setEditingId(null); setAddType('subfolder'); setFolderForm({ name: '' }); setMaterialForm({ type: 'pdf', title: '', url: '' }); setIsAdding(true); }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
-                        <Plus size={14} /> Add Content
+                    <button onClick={() => { setIsEditing(false); setEditingId(null); setModalMode('folder'); setFolderForm({ name: '' }); setIsAdding(true); }} className="flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                        <Plus size={14} /> Add Main Folder / Content
                     </button>
                 )}
             </div>
@@ -1034,7 +837,7 @@ const ContentView: React.FC = () => {
             {/* Global Breadcrumbs Navigation */}
             <div className="flex items-center gap-2 px-5 py-3 bg-slate-900/[0.03] dark:bg-white/[0.03] rounded-2xl overflow-x-auto no-scrollbar border border-slate-900/[0.06] dark:border-white/[0.06] mb-6">
                 <button 
-                    onClick={() => { setNavLevel('root'); setView('subjects'); setSelectedClassId(null); setSelectedStreamId(null); setSelectedExamId(null); setCurrentSubject(null); setPath([]); }} 
+                    onClick={() => { setNavLevel('root'); setView('sections'); setSelectedClassId(null); setSelectedStreamId(null); setSelectedExamId(null); setCurrentSubject(null); setPath([]); }} 
                     className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'root' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
                 >
                     <LayoutDashboard size={12} /> HOME (ROOT)
@@ -1044,7 +847,7 @@ const ContentView: React.FC = () => {
                     <>
                         <ChevronRight size={10} className="text-slate-600 shrink-0" />
                         <button 
-                            onClick={() => { setNavLevel('classes'); setView('subjects'); setSelectedClassId(null); setSelectedStreamId(null); setCurrentSubject(null); setPath([]); }} 
+                            onClick={() => { setNavLevel('classes'); setView('sections'); setSelectedClassId(null); setSelectedStreamId(null); setCurrentSubject(null); setPath([]); }} 
                             className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'classes' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
                         >
                             School Classes
@@ -1077,7 +880,7 @@ const ContentView: React.FC = () => {
                     <>
                         <ChevronRight size={10} className="text-slate-600 shrink-0" />
                         <button 
-                            onClick={() => { setNavLevel('exam-sections'); setView('subjects'); setCurrentSubject(null); setPath([]); }} 
+                            onClick={() => { setNavLevel('exam-sections'); setView('sections'); setCurrentSubject(null); setPath([]); }} 
                             className={`text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-colors ${navLevel === 'exam-sections' ? 'text-violet-500' : 'text-slate-400 hover:text-slate-200'}`}
                         >
                             {exams.find(ex => ex.id === selectedExamId)?.name}
@@ -1114,13 +917,13 @@ const ContentView: React.FC = () => {
                 ))}
             </div>
 
-            {view === 'subjects' && (
+            {view === 'sections' && (
                 <div className="space-y-4">
                     <div className="relative group">
                         <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-violet-500 transition-colors" />
                         <input 
                             type="text" 
-                            placeholder="Filter subjects by name or reference code..." 
+                            placeholder="Filter sections by name or code..." 
                             className="w-full bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl pl-11 pr-4 py-3.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 placeholder:text-slate-400/60 focus:bg-white dark:focus:bg-white/[0.05] focus:border-violet-500/50 transition-all outline-none shadow-sm"
                             value={subSearch}
                             onChange={e => setSubSearch(e.target.value)}
@@ -1130,7 +933,7 @@ const ContentView: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-xl">
                             <label className="text-[8px] font-black uppercase text-slate-400 tracking-widest border-r border-slate-400/20 pr-1.5 mr-0.5 whitespace-nowrap">Filter</label>
-                            
+
                             <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
                                 <option value="" className="bg-slate-900 text-white">Class: All</option>
                                 {classes.map(c => <option key={c.id} value={c.name} className="bg-slate-900 text-white">{c.name}</option>)}
@@ -1142,7 +945,7 @@ const ContentView: React.FC = () => {
                                 <option value="" className="bg-slate-900 text-white">Stream: All</option>
                                 {streams.map(s => <option key={s.id} value={s.name} className="bg-slate-900 text-white">{s.name}</option>)}
                             </select>
-                            
+
                             <span className="w-1 h-1 rounded-full bg-slate-400/20 mx-1.5"></span>
 
                             <select className="bg-transparent border-none text-[10px] font-black text-slate-600 dark:text-slate-300 outline-none uppercase cursor-pointer" value={filterExam} onChange={e => setFilterExam(e.target.value)}>
@@ -1150,7 +953,7 @@ const ContentView: React.FC = () => {
                                 {exams.map(ex => <option key={ex.id} value={ex.name} className="bg-slate-900 text-white">{ex.name}</option>)}
                             </select>
                         </div>
-                        
+
                         {(filterClass || filterStream || filterExam || subSearch) && (
                             <button onClick={() => { setFilterClass(''); setFilterStream(''); setFilterExam(''); setSubSearch(''); }} className="px-3 py-1.5 text-[9px] font-black uppercase text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center gap-1.5">
                                 <RefreshCw size={10} /> Reset
@@ -1165,11 +968,12 @@ const ContentView: React.FC = () => {
                 {isAdding && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40">
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-[#0c0c14] border border-white/10 rounded-3xl p-8 max-w-lg w-full shadow-2xl space-y-6">
-                            <h2 className="text-xl font-black uppercase tracking-tighter text-slate-900 dark:text-white shadow-sm">
-                                {isEditing ? 'Modify Content Node' : (view === 'subjects' ? 'Direct Subject Creation' : 'Structure / Content Node')}
+                            <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                                {isEditing ? <Pencil size={16} className="text-violet-500" /> : <Plus size={16} className="text-violet-500" />}
+                                {isEditing ? `Edit ${modalMode}` : `New ${modalMode} creation`}
                             </h2>
 
-                            {view === 'subjects' ? (
+                            {modalMode === 'subject' && (
                                 <>
                                     {!isEditing && creationStep === 0 ? (
                                         <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
@@ -1187,7 +991,7 @@ const ContentView: React.FC = () => {
                                                                     tag: '',
                                                                     code: `${target}-MAIN`,
                                                                     target_exams: [target],
-                                                                    target_classes: []  // Competitive exams only appear in exam sections, not in class sections
+                                                                    target_classes: []
                                                                 });
                                                             } else {
                                                                 setSubForm({
@@ -1238,7 +1042,7 @@ const ContentView: React.FC = () => {
                                                         <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.code} onChange={e => setSubForm({ ...subForm, code: e.target.value })} placeholder="e.g. MAT-041" />
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="space-y-1">
                                                     <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Display Name</label>
                                                     <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={subForm.name} onChange={e => setSubForm({ ...subForm, name: e.target.value })} placeholder={targetType === 'CBSE' ? "e.g. Physics" : "e.g. JEE Physics Mastery"} />
@@ -1257,8 +1061,8 @@ const ContentView: React.FC = () => {
                                                         </div>
                                                         <div className="flex-1 space-y-2">
                                                             <div className="relative group cursor-pointer">
-                                                                <input 
-                                                                    type="file" 
+                                                                <input
+                                                                    type="file"
                                                                     accept="image/*"
                                                                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                                                     onChange={async (e) => {
@@ -1324,47 +1128,84 @@ const ContentView: React.FC = () => {
                                                 )}
                                             </div>
 
-                                            <button onClick={handleAddSubject} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all mt-4">{isEditing ? 'Sync Content Node' : 'Initialize Subject Hierarchy'}</button>
+                                            <button onClick={handleAddSubject} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all mt-4">{isEditing ? 'Save Section Changes' : 'Create Section'}</button>
                                         </div>
                                     )}
                                 </>
-                            ) : (
+                            )}
+
+                            {modalMode === 'class' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Class Name</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={classForm.name} onChange={e => setClassForm({ ...classForm, name: e.target.value })} placeholder="e.g. IX, X, XI" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Class Category</label>
+                                        <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={classForm.class_type} onChange={e => setClassForm({ ...classForm, class_type: e.target.value })}>
+                                            <option value="SECONDARY">SECONDARY (No Streams)</option>
+                                            <option value="SENIOR SECONDARY">SENIOR SECONDARY (With Streams)</option>
+                                        </select>
+                                    </div>
+                                    <button onClick={saveClass} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Save Class Configuration</button>
+                                </div>
+                            )}
+
+                            {modalMode === 'stream' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Stream Name</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={streamForm.name} onChange={e => setStreamForm({ ...streamForm, name: e.target.value })} placeholder="e.g. Science, Commerce, Humanities" />
+                                    </div>
+                                    <button onClick={saveStream} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Save Stream Definition</button>
+                                </div>
+                            )}
+
+                            {modalMode === 'exam' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Exam Name</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={examForm.name} onChange={e => setExamForm({ ...examForm, name: e.target.value })} placeholder="e.g. JEE Main 2024" />
+                                    </div>
+                                    <button onClick={saveExam} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Save Exam Instance</button>
+                                </div>
+                            )}
+
+                            {modalMode === 'folder' && (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Folder Name</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={folderForm.name} onChange={e => setFolderForm({ ...folderForm, name: e.target.value })} placeholder="e.g. NCERT Solutions" />
+                                    </div>
+                                    <button onClick={handleAddFolder} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">{isEditing ? 'Save Folder' : 'Create Folder'}</button>
+                                </div>
+                            )}
+
+                            {modalMode === 'material' && (
                                 <div className="space-y-4">
                                     <div className="space-y-1">
                                         <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Content Type</label>
                                         <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={addType} onChange={e => {
                                             const t = e.target.value as 'subfolder' | 'pdf' | 'image' | 'video';
                                             setAddType(t);
-                                            if (t !== 'subfolder') setMaterialForm({ ...materialForm, type: t as MaterialType });
+                                            if (t !== 'subfolder') setMaterialForm({ ...materialForm, type: t as any });
+                                            if (t === 'subfolder') setModalMode('folder');
                                         }}>
-                                            <option value="subfolder">Subfolder</option>
                                             <option value="pdf">PDF Document</option>
                                             <option value="image">Image File</option>
                                             <option value="video">YouTube Video</option>
+                                            <option value="subfolder">Create Nested Subfolder</option>
                                         </select>
                                     </div>
-
-                                    {addType === 'subfolder' ? (
-                                        <>
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Folder Name</label>
-                                                <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={folderForm.name} onChange={e => setFolderForm({ name: e.target.value })} placeholder="e.g. Notes, Videos, Practice" />
-                                            </div>
-                                            <button onClick={handleAddFolder} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">{isEditing ? 'Update Folder' : 'Create Subfolder'}</button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Title</label>
-                                                <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={materialForm.title} onChange={e => setMaterialForm({ ...materialForm, title: e.target.value })} placeholder="e.g. Chapter 1 Summary" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 ml-1">{addType === 'video' ? 'YouTube URL' : 'File Direct URL'}</label>
-                                                <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={materialForm.url} onChange={e => setMaterialForm({ ...materialForm, url: e.target.value })} placeholder="https://..." />
-                                            </div>
-                                            <button onClick={handleAddMaterial} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">{isEditing ? 'Save Changes' : 'Publish Content'}</button>
-                                        </>
-                                    )}
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Title</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={materialForm.title} onChange={e => setMaterialForm({ ...materialForm, title: e.target.value })} placeholder="e.g. Chapter 1 Summary" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">URL</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={materialForm.url} onChange={e => setMaterialForm({ ...materialForm, url: e.target.value })} placeholder="https://..." />
+                                    </div>
+                                    <button onClick={handleAddMaterial} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">{isEditing ? 'Save Changes' : 'Publish Content'}</button>
                                 </div>
                             )}
 
@@ -1383,7 +1224,7 @@ const ContentView: React.FC = () => {
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
-                        {view === 'subjects' ? (
+                        {view === 'sections' ? (
                             <>
                                 {navLevel === 'root' && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
@@ -1409,33 +1250,34 @@ const ContentView: React.FC = () => {
 
                                 {navLevel === 'classes' && (
                                     <div className="space-y-4">
-                                        <div className="flex justify-end p-2 px-6">
-                                            <button onClick={handleNavAddClass} className="px-5 py-2.5 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-violet-500 transition-all active:scale-95">
-                                                <Plus size={14} /> Create Class
-                                            </button>
-                                        </div>
                                         <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
                                             {classes.map(c => (
                                                 <div key={c.id} onClick={() => { 
                                                     setSelectedClassId(c.id); 
-                                                    const hasStreams = classStreams.some(cs => cs.class_id === c.id);
-                                                    if (hasStreams) {
-                                                        setNavLevel('streams'); 
-                                                    } else {
+                                                    if (c.class_type === 'SECONDARY') {
                                                         setSelectedStreamId(null);
                                                         setNavLevel('sections');
+                                                    } else {
+                                                        setNavLevel('streams');
                                                     }
                                                 }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-12 h-12 bg-violet-600/10 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📂</div>
                                                         <div>
-                                                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{c.name}</h4>
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{c.name}</h4>
+                                                                {c.class_type && (
+                                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${c.class_type === 'SECONDARY' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-violet-500/10 text-violet-500'}`}>
+                                                                        {c.class_type}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Class Folder</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                                            <button onClick={(e) => { e.stopPropagation(); handleNavEditClass(c.id, c.name); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors"><Pencil size={15} /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); handleNavEditClass(c.id, c.name, c.class_type); }} className="p-2 text-slate-300 hover:text-violet-500 transition-colors"><Pencil size={15} /></button>
                                                             <button onClick={(e) => { e.stopPropagation(); handleNavDeleteClass(c.id); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
                                                         </div>
                                                         <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
@@ -1458,13 +1300,24 @@ const ContentView: React.FC = () => {
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Stream Folder</p>
                                                     </div>
                                                 </div>
-                                                <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <button onClick={(e) => { e.stopPropagation(); handleNavEditStream(s.id, s.name); }} className="p-2 text-slate-300 hover:text-cyan-500 transition-colors"><Pencil size={15} /></button>
+                                                        <button onClick={(e) => { e.stopPropagation(); unlinkStreamFromClass(selectedClassId!, s.id).then(loadSubjects); }} className="p-2 text-slate-300 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
+                                                    </div>
+                                                    <ChevronRight size={16} className="text-slate-300 group-hover:translate-x-1 transition-transform" />
+                                                </div>
                                             </div>
                                         ))}
                                         {streams.filter(s => classStreams.some(cs => cs.class_id === selectedClassId && cs.stream_id === s.id)).length === 0 && (
-                                            <div className="py-20 text-center text-slate-400 text-xs font-bold px-10 leading-relaxed uppercase tracking-widest opacity-50">
-                                                This class has no streams linked.<br/>
-                                                <span className="text-[9px] lowercase font-medium">Link them in Settings &gt; Platform Settings</span>
+                                            <div className="py-20 text-center flex flex-col items-center gap-4">
+                                                <p className="text-slate-400 text-xs font-bold px-10 leading-relaxed uppercase tracking-widest opacity-50">
+                                                    This class has no streams attached.<br/>
+                                                    <span className="text-[9px] lowercase font-medium">Add a stream to begin organizing sections.</span>
+                                                </p>
+                                                <button onClick={handleNavAddStream} className="px-6 py-3 bg-cyan-600/20 text-cyan-500 border border-cyan-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-cyan-600 hover:text-white transition-all">
+                                                    Initialize First Stream
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -1512,11 +1365,6 @@ const ContentView: React.FC = () => {
 
                                 {navLevel === 'exams' && (
                                     <div className="space-y-4">
-                                        <div className="flex justify-end p-2 px-6">
-                                            <button onClick={handleNavAddExam} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-emerald-500 transition-all active:scale-95">
-                                                <Plus size={14} /> Create Exam
-                                            </button>
-                                        </div>
                                         <div className="divide-y divide-slate-900/[0.04] dark:divide-white/[0.04]">
                                             {exams.map(ex => (
                                                 <div key={ex.id} onClick={() => { setSelectedExamId(ex.id); setNavLevel('exam-sections'); }} className="p-6 flex items-center justify-between hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.03] transition-all cursor-pointer group">
