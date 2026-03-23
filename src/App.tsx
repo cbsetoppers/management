@@ -91,8 +91,8 @@ const LoginPage: React.FC<{ onLogin: (op: Operator) => void }> = ({ onLogin }) =
 // COMPONENTS
 // ─────────────────────────────────────────────────────────────────────
 const SidebarItem: React.FC<{ icon: React.ReactNode; label: string; active: boolean; onClick: () => void }> = ({ icon, label, active, onClick }) => (
-    <motion.button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative ${active ? 'text-violet-400 bg-violet-600/10 border border-violet-500/20' : 'text-slate-500 dark:text-white/30 hover:text-slate-900 dark:hover:text-white/60 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
-        <span className={active ? 'text-violet-400' : 'opacity-50'}>{icon}</span>
+    <motion.button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all group relative ${active ? 'text-violet-400 bg-violet-600/10 border border-violet-500/20' : 'text-slate-600 dark:text-white/30 hover:text-slate-900 dark:hover:text-white/60 hover:bg-slate-100 dark:hover:bg-white/[0.04]'}`}>
+        <span className={active ? 'text-violet-400' : 'opacity-60'}>{icon}</span>
         <span>{label}</span>
         {active && <ChevronRight size={12} className="ml-auto text-violet-500" />}
     </motion.button>
@@ -102,10 +102,10 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: React.Re
     <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 hover:bg-slate-50 dark:hover:bg-white/[0.07] transition-all group shadow-sm">
         <div className="flex items-start justify-between mb-5">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} bg-current/10`}>{icon}</div>
-            <Activity size={14} className="text-slate-300 dark:text-white/10" />
+            <Activity size={14} className="text-slate-200 dark:text-white/10" />
         </div>
         <p className={`text-3xl font-black ${color} tracking-tighter mb-1`}>{value}</p>
-        <p className="text-[11px] font-black text-slate-400 dark:text-white/20 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-[11px] font-black text-slate-500 dark:text-white/20 uppercase tracking-widest mb-1">{label}</p>
         <p className="text-[10px] text-slate-400 dark:text-white/15 font-medium">{sub}</p>
     </div>
 );
@@ -210,8 +210,8 @@ const ContentView: React.FC = () => {
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-violet-600/10 dark:bg-violet-600/10 rounded-2xl flex items-center justify-center text-2xl border border-violet-500/20">{currentNode ? '📁' : '🏢'}</div>
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">{currentNode ? currentNode.name : 'Core Materials'}</h1>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{currentNode ? `Layer: ${currentNode.node_type}` : 'Root Navigator'}</p>
+                        <h1 className="text-3xl font-black text-slate-950 dark:text-white uppercase tracking-tighter leading-none">{currentNode ? currentNode.name : 'Core Materials'}</h1>
+                        <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1.5">{currentNode ? `Layer: ${currentNode.node_type}` : 'Root Navigator'}</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -237,9 +237,9 @@ const ContentView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-900/5 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5 text-[9px] font-black uppercase tracking-widest">
-                <button onClick={() => setPath([])} className={path.length === 0 ? 'text-violet-500' : 'text-slate-400 dark:text-white/40'}>ROOT</button>
-                {path.map((p, i) => <React.Fragment key={p.id}><ChevronRight size={10} className="opacity-20"/><button onClick={() => setPath(path.slice(0, i + 1))} className={i === path.length - 1 ? 'text-violet-500' : 'text-slate-400 dark:text-white/40'}>{p.name}</button></React.Fragment>)}
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 text-[9px] font-black uppercase tracking-widest">
+                <button onClick={() => setPath([])} className={path.length === 0 ? 'text-violet-500' : 'text-slate-500 dark:text-white/40'}>ROOT</button>
+                {path.map((p, i) => <React.Fragment key={p.id}><ChevronRight size={10} className="text-slate-300 dark:opacity-20"/><button onClick={() => setPath(path.slice(0, i + 1))} className={i === path.length - 1 ? 'text-violet-500' : 'text-slate-500 dark:text-white/40'}>{p.name}</button></React.Fragment>)}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -249,7 +249,12 @@ const ContentView: React.FC = () => {
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-lg">{n.node_type === 'CLASS' ? '🏫' : (n.node_type === 'STREAM' ? '🌊' : (n.node_type === 'EXAM' ? '🎓' : '📂'))}</div>
-                                    <div><h4 className="text-sm font-black uppercase text-slate-900 dark:text-white">{n.name}</h4><p className="text-[8px] font-black text-slate-500 dark:text-white/30 tracking-widest uppercase">{n.node_type}</p></div>
+                                    <div>
+                                        <h4 className="text-sm font-black uppercase text-slate-950 dark:text-white leading-tight">{n.name}</h4>
+                                        <p className="text-[9px] font-black text-slate-500 dark:text-white/30 tracking-widest uppercase">
+                                            {n.node_type} {n.node_type === 'CLASS' && `(${(n.metadata as any)?.category === 'SENIOR SECONDARY' ? 'Sr. Sec' : 'Sec'})`}
+                                        </p>
+                                    </div>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                     <button onClick={(e) => { e.stopPropagation(); setEditingNode(n); setNodeForm({ name: n.name, type: n.node_type, category: (n.metadata as any)?.category || 'SECONDARY' }); setIsEditing(true); setModalMode('node'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
@@ -296,22 +301,22 @@ const ContentView: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {nodeForm.type === 'CLASS' && (
-                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Curriculum Level</label>
-                                            <select className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white" value={nodeForm.category} onChange={e => setNodeForm({...nodeForm, category: e.target.value})}>
-                                                <option value="SECONDARY">Secondary (IX-X)</option>
-                                                <option value="SENIOR SECONDARY">Senior Secondary (XI-XII)</option>
-                                            </select>
+                                    {currentNode?.node_type === 'CLASS' && (
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">Establish Entry Strategy</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button onClick={() => setNodeForm({...nodeForm, type: 'STREAM'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.type === 'STREAM' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>New Stream</button>
+                                                <button onClick={() => setNodeForm({...nodeForm, type: 'SECTION'})} className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${nodeForm.type === 'SECTION' ? 'bg-violet-600 border-violet-500 text-white shadow-lg' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>New Subject</button>
+                                            </div>
                                         </div>
                                     )}
 
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase text-slate-400 ml-1">Registry Name</label>
-                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-violet-500 transition-all" placeholder={nodeForm.type === 'CLASS' ? "e.g. Class 10" : "e.g. JEE Main"} value={nodeForm.name} onChange={e => setNodeForm({...nodeForm, name: e.target.value})} />
+                                        <label className="text-[10px] font-black uppercase text-slate-600 dark:text-white/40 ml-1">Registry Name</label>
+                                        <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-950 dark:text-white outline-none focus:border-violet-500 transition-all placeholder:text-slate-300" placeholder={nodeForm.type === 'CLASS' ? "e.g. Class 10" : "e.g. Physics / Science"} value={nodeForm.name} onChange={e => setNodeForm({...nodeForm, name: e.target.value})} />
                                     </div>
                                     
-                                    <button onClick={saveNode} className="w-full py-4.5 bg-slate-900 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 hover:bg-violet-700 dark:hover:bg-violet-500 transition-all">Synchronize to Core</button>
+                                    <button onClick={saveNode} className="w-full py-4.5 bg-slate-950 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 hover:bg-violet-700 dark:hover:bg-violet-500 transition-all">Synchronize Entry</button>
                                 </div>
                             ) : (
                                 <div className="space-y-5">
