@@ -321,6 +321,64 @@ export const linkStreamToClass = async (classId: string, streamId: string) => {
     await supabase.from('class_streams').upsert({ class_id: classId, stream_id: streamId });
 };
 
+// SYLLABUS TRACKER (DYNAMIC)
+export interface SyllabusTopic {
+    id: string;
+    chapter_id: string;
+    topic_name: string;
+    order_index: number;
+}
+
+export interface SyllabusChapter {
+    id: string;
+    class_id: string;
+    subject_name: string;
+    chapter_name: string;
+    chapter_number: number;
+    syllabus_topics?: SyllabusTopic[];
+}
+
+export const fetchSyllabusChapters = async (classId: string) => {
+    const { data, error } = await supabase
+        .from('syllabus_chapters')
+        .select('*, syllabus_topics(*)')
+        .eq('class_id', classId)
+        .order('chapter_number');
+    if (error) throw error;
+    return data || [];
+};
+
+export const createSyllabusChapter = async (chap: Partial<SyllabusChapter>) => {
+    const { data, error } = await supabase.from('syllabus_chapters').insert(chap).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const updateSyllabusChapter = async (id: string, chap: Partial<SyllabusChapter>) => {
+    const { error } = await supabase.from('syllabus_chapters').update(chap).eq('id', id);
+    if (error) throw error;
+};
+
+export const deleteSyllabusChapter = async (id: string) => {
+    const { error } = await supabase.from('syllabus_chapters').delete().eq('id', id);
+    if (error) throw error;
+};
+
+export const createSyllabusTopic = async (topic: Partial<SyllabusTopic>) => {
+    const { data, error } = await supabase.from('syllabus_topics').insert(topic).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const updateSyllabusTopic = async (id: string, topic: Partial<SyllabusTopic>) => {
+    const { error } = await supabase.from('syllabus_topics').update(topic).eq('id', id);
+    if (error) throw error;
+};
+
+export const deleteSyllabusTopic = async (id: string) => {
+    const { error } = await supabase.from('syllabus_topics').delete().eq('id', id);
+    if (error) throw error;
+};
 export const unlinkStreamFromClass = async (classId: string, streamId: string) => {
     await supabase.from('class_streams').delete().match({ class_id: classId, stream_id: streamId });
 };

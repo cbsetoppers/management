@@ -24,10 +24,13 @@ import {
     fetchExams, addExam, deleteExam, updateExam,
     fetchStreams, addStream, deleteStream, updateStream,
     fetchClassStreams, linkStreamToClass, unlinkStreamFromClass,
-    Subject, Folder, Material, SubjectCategory, MaterialType, StoreProduct, StoreBanner, SubscriptionPlan
+    fetchSyllabusChapters, createSyllabusChapter, updateSyllabusChapter, deleteSyllabusChapter,
+    createSyllabusTopic, updateSyllabusTopic, deleteSyllabusTopic,
+    Subject, Folder, Material, MaterialType, StoreProduct, StoreBanner, SubscriptionPlan,
+    SyllabusChapter, SyllabusTopic
 } from './services/supabase';
 
-type View = 'dashboard' | 'students' | 'content' | 'settings' | 'operators' | 'store' | 'subscriptions';
+type View = 'dashboard' | 'students' | 'content' | 'syllabus' | 'settings' | 'operators' | 'store' | 'subscriptions';
 
 const LOGO_URL = "https://i.ibb.co/vC4MYFFk/1770137585956.png";
 
@@ -1469,8 +1472,196 @@ const ContentView: React.FC = () => {
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// SETTINGS VIEW
+// SYLLABUS MANAGER (DYNAMIC)
 // ─────────────────────────────────────────────────────────────────────
+const SyllabusView: React.FC = () => {
+    const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+    const [chapters, setChapters] = useState<SyllabusChapter[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
+    const [modalMode, setModalMode] = useState<'chapter' | 'topic'>('chapter');
+    const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+    const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
+
+    const [chapForm, setChapForm] = useState({ subject_name: '', chapter_name: '', chapter_number: 1 });
+    const [topicForm, setTopicForm] = useState({ topic_name: '', order_index: 1 });
+
+    useEffect(() => {
+        fetchClasses().then(setClasses);
+    }, []);
+
+    useEffect(() => {
+        if (selectedClassId) {
+            setLoading(true);
+            fetchSyllabusChapters(selectedClassId).then(data => {
+                setChapters(data);
+                setLoading(false);
+            });
+        }
+    }, [selectedClassId]);
+
+    const handleAddChapter = async () => {
+        if (!selectedClassId || !chapForm.subject_name || !chapForm.chapter_name) return;
+        try {
+            await createSyllabusChapter({ ...chapForm, class_id: selectedClassId });
+            setIsAdding(false);
+            setChapForm({ subject_name: '', chapter_name: '', chapter_number: chapters.length + 1 });
+            fetchSyllabusChapters(selectedClassId).then(setChapters);
+        } catch (_) { alert('Failed to add chapter'); }
+    };
+
+    const handleAddTopic = async () => {
+        if (!currentChapterId || !topicForm.topic_name) return;
+        try {
+            if (editingTopicId) {
+                await updateSyllabusTopic(editingTopicId, topicForm);
+            } else {
+                await createSyllabusTopic({ ...topicForm, chapter_id: currentChapterId });
+            }
+            setIsAdding(false);
+            setEditingTopicId(null);
+            setTopicForm({ topic_name: '', order_index: 1 });
+            fetchSyllabusChapters(selectedClassId!).then(setChapters);
+        } catch (_) { alert('Failed to save topic'); }
+    };
+
+    const handleDeleteChapter = async (id: string) => {
+        if (!confirm('Delete this chapter and all its topics?')) return;
+        await deleteSyllabusChapter(id);
+        fetchSyllabusChapters(selectedClassId!).then(setChapters);
+    };
+
+    const handleDeleteTopic = async (id: string) => {
+        if (!confirm('Delete this topic?')) return;
+        await deleteSyllabusTopic(id);
+        fetchSyllabusChapters(selectedClassId!).then(setChapters);
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Syllabus Tracker</h1>
+                    <p className="text-slate-900/30 dark:text-white/30 text-sm font-medium mt-1">Manage dynamic chapters and topics per class.</p>
+                </div>
+                {selectedClassId && (
+                    <button
+                        onClick={() => { setModalMode('chapter'); setIsAdding(true); setChapForm({ ...chapForm, chapter_number: chapters.length + 1 }); }}
+                        className="flex items-center gap-2 px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+                    >
+                        <Plus size={14} /> Add New Chapter
+                    </button>
+                )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 p-1 bg-slate-900/[0.03] dark:bg-white/[0.03] rounded-2xl border border-slate-900/[0.06] dark:border-white/[0.06]">
+                {classes.map(c => (
+                    <button
+                        key={c.id}
+                        onClick={() => setSelectedClassId(c.id)}
+                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedClassId === c.id ? 'bg-violet-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+                    >
+                        {c.name}
+                    </button>
+                ))}
+            </div>
+
+            {!selectedClassId ? (
+                <div className="py-20 text-center flex flex-col items-center gap-4 bg-slate-900/[0.02] dark:bg-white/[0.02] border border-dashed border-slate-900/[0.1] dark:border-white/[0.1] rounded-3xl">
+                    <BookOpen size={40} className="text-slate-200 dark:text-white/10" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select a class to manage its syllabus</p>
+                </div>
+            ) : loading ? (
+                <div className="py-20 text-center"><RefreshCw className="animate-spin text-violet-500 mx-auto" /></div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Unique Subjects fetched from entries */}
+                    {Array.from(new Set(chapters.map(c => c.subject_name))).map(sub => (
+                        <div key={sub} className="bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-3xl p-6 space-y-4">
+                            <h3 className="text-sm font-black text-violet-500 uppercase tracking-widest flex items-center gap-2">
+                                <Activity size={14} /> {sub}
+                            </h3>
+                            <div className="space-y-3">
+                                {chapters.filter(c => c.subject_name === sub).map(chap => (
+                                    <div key={chap.id} className="bg-white dark:bg-white/[0.03] border border-slate-900/[0.06] dark:border-white/[0.06] rounded-2xl p-4 space-y-3 group">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[10px] font-black bg-violet-600 text-white w-6 h-6 flex items-center justify-center rounded-lg">{chap.chapter_number}</span>
+                                                <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase">{chap.chapter_name}</h4>
+                                            </div>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button onClick={() => { setCurrentChapterId(chap.id); setModalMode('topic'); setIsAdding(true); setTopicForm({ topic_name: '', order_index: (chap.syllabus_topics?.length || 0) + 1 }); }} className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Plus size={14} /></button>
+                                                <button onClick={() => handleDeleteChapter(chap.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg"><Trash2 size={14} /></button>
+                                            </div>
+                                        </div>
+                                        <div className="pl-9 space-y-2 border-l-2 border-violet-500/10">
+                                            {chap.syllabus_topics?.map(topic => (
+                                                <div key={topic.id} className="flex items-center justify-between py-1 group/topic">
+                                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight">{topic.order_index}. {topic.topic_name}</p>
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover/topic:opacity-100 transition-all">
+                                                        <button onClick={() => { setEditingTopicId(topic.id); setTopicForm({ topic_name: topic.topic_name, order_index: topic.order_index }); setCurrentChapterId(chap.id); setModalMode('topic'); setIsAdding(true); }} className="text-slate-400 hover:text-violet-500"><Pencil size={10} /></button>
+                                                        <button onClick={() => handleDeleteTopic(topic.id)} className="text-slate-400 hover:text-red-400"><Trash2 size={10} /></button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                    {chapters.length === 0 && (
+                        <div className="col-span-full py-20 text-center opacity-30 text-[10px] font-black uppercase tracking-widest">No chapters added yet</div>
+                    )}
+                </div>
+            )}
+
+            <AnimatePresence>
+                {isAdding && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white dark:bg-[#0c0c14] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
+                            <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4">
+                                {modalMode === 'chapter' ? 'Create New Chapter' : 'Add Chapter Topic'}
+                            </h2>
+                            {modalMode === 'chapter' ? (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400">Subject Name</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={chapForm.subject_name} onChange={e => setChapForm({ ...chapForm, subject_name: e.target.value })} placeholder="e.g. Physics" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400">Chapter Title</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={chapForm.chapter_name} onChange={e => setChapForm({ ...chapForm, chapter_name: e.target.value })} placeholder="e.g. Electric Charges" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400">Chapter Number</label>
+                                        <input type="number" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={chapForm.chapter_number} onChange={e => setChapForm({ ...chapForm, chapter_number: parseInt(e.target.value) || 1 })} />
+                                    </div>
+                                    <button onClick={handleAddChapter} className="w-full py-4 bg-violet-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Publish Chapter</button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400">Topic Title</label>
+                                        <input type="text" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={topicForm.topic_name} onChange={e => setTopicForm({ ...topicForm, topic_name: e.target.value })} placeholder="e.g. Coulomb's Law" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black uppercase text-slate-400">Order index</label>
+                                        <input type="number" className="w-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold" value={topicForm.order_index} onChange={e => setTopicForm({ ...topicForm, order_index: parseInt(e.target.value) || 1 })} />
+                                    </div>
+                                    <button onClick={handleAddTopic} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl active:scale-95 transition-all">Save Topic</button>
+                                </div>
+                            )}
+                            <button onClick={() => { setIsAdding(false); setEditingTopicId(null); }} className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-red-400 transition-colors">Dismiss</button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
 const SettingsView: React.FC = () => {
     const [maintenance, setMaintenance] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -2590,6 +2781,7 @@ const AdminApp: React.FC = () => {
         { id: 'operators', icon: <Shield size={16} />, label: 'Operators' },
         { id: 'store', icon: <ShoppingBag size={16} />, label: 'Toppers Store' },
         { id: 'subscriptions', icon: <Crown size={16} />, label: 'Subscriptions' },
+        { id: 'syllabus', icon: <Book size={16} />, label: 'Syllabus' },
         { id: 'content', icon: <BookOpen size={16} />, label: 'Content Manager' },
         { id: 'settings', icon: <Settings size={16} />, label: 'Settings' },
     ];
@@ -2727,6 +2919,7 @@ const AdminApp: React.FC = () => {
                             {view === 'operators' && <OperatorsView currentOperator={operator} />}
                             {view === 'store' && <StoreView />}
                             {view === 'subscriptions' && <SubscriptionManager />}
+                            {view === 'syllabus' && <SyllabusView />}
                             {view === 'content' && <ContentView />}
                             {view === 'settings' && <SettingsView />}
                         </motion.div>
