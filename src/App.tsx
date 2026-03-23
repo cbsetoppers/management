@@ -215,8 +215,25 @@ const ContentView: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => { setModalMode('node'); setIsEditing(false); setNodeForm({ name: '', type: currentNode ? (currentNode.node_type === 'CLASS' ? 'STREAM' : 'SECTION') : 'CLASS', category: 'SECONDARY' }); setIsAdding(true); }} className="px-5 py-3 bg-violet-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">+ Node</button>
-                    {currentNode && <button onClick={() => { setModalMode('material'); setIsEditing(false); setMatForm({ title: '', url: '', type: 'pdf' }); setIsAdding(true); }} className="px-5 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg">+ Media</button>}
+                    <button 
+                        onClick={() => { 
+                            const isSeniorSecondary = currentNode?.node_type === 'CLASS' && (currentNode.metadata as any)?.category === 'SENIOR SECONDARY';
+                            const isSecondary = currentNode?.node_type === 'CLASS' && (currentNode.metadata as any)?.category === 'SECONDARY';
+                            
+                            setModalMode('node'); 
+                            setIsEditing(false); 
+                            setNodeForm({ 
+                                name: '', 
+                                type: currentNode ? (isSeniorSecondary ? 'STREAM' : (isSecondary ? 'SECTION' : (currentNode.node_type === 'STREAM' ? 'SECTION' : 'FOLDER'))) : 'CLASS', 
+                                category: 'SECONDARY' 
+                            }); 
+                            setIsAdding(true); 
+                        }} 
+                        className="px-5 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all"
+                    >
+                        + Node
+                    </button>
+                    {currentNode && <button onClick={() => { setModalMode('material'); setIsEditing(false); setMatForm({ title: '', url: '', type: 'pdf' }); setIsAdding(true); }} className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all">+ Media</button>}
                 </div>
             </div>
 
@@ -231,8 +248,8 @@ const ContentView: React.FC = () => {
                         <div key={n.id} onClick={() => setPath([...path, n])} className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-6 group cursor-pointer hover:border-violet-500/50 transition-all shadow-sm">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-lg">{n.node_type === 'CLASS' ? '🏫' : '📂'}</div>
-                                    <div><h4 className="text-sm font-black uppercase text-slate-900 dark:text-white">{n.name}</h4><p className="text-[8px] font-black opacity-30 tracking-widest uppercase">{n.node_type}</p></div>
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-lg">{n.node_type === 'CLASS' ? '🏫' : (n.node_type === 'STREAM' ? '🌊' : (n.node_type === 'EXAM' ? '🎓' : '📂'))}</div>
+                                    <div><h4 className="text-sm font-black uppercase text-slate-900 dark:text-white">{n.name}</h4><p className="text-[8px] font-black text-slate-500 dark:text-white/30 tracking-widest uppercase">{n.node_type}</p></div>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                     <button onClick={(e) => { e.stopPropagation(); setEditingNode(n); setNodeForm({ name: n.name, type: n.node_type, category: (n.metadata as any)?.category || 'SECONDARY' }); setIsEditing(true); setModalMode('node'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
@@ -246,7 +263,7 @@ const ContentView: React.FC = () => {
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-xl bg-violet-600/10 flex items-center justify-center text-lg">{m.type === 'pdf' ? '📄' : '🎬'}</div>
-                                    <div><h4 className="text-sm font-black uppercase line-clamp-1 max-w-[120px] text-slate-900 dark:text-white">{m.title}</h4><p className="text-[8px] font-black opacity-30 tracking-widest uppercase">{m.type}</p></div>
+                                    <div><h4 className="text-sm font-black uppercase line-clamp-1 max-w-[120px] text-slate-900 dark:text-white">{m.title}</h4><p className="text-[8px] font-black text-slate-500 dark:text-white/30 tracking-widest uppercase">{m.type}</p></div>
                                 </div>
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                     <button onClick={() => { setEditingMaterial(m); setMatForm(m); setIsEditing(true); setModalMode('material'); setIsAdding(true); }} className="p-1.5 text-slate-400 hover:text-violet-500 transition-colors"><Pencil size={14} /></button>
@@ -262,7 +279,7 @@ const ContentView: React.FC = () => {
                 {isAdding && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40">
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-[#0c0c14] border border-slate-200 dark:border-white/10 rounded-3xl p-8 max-w-md w-full space-y-4 shadow-2xl">
-                            <h2 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <h2 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
                                 <Activity size={12} className="text-violet-500"/>
                                 {isEditing ? 'Sync System' : 'Initialize New'} {modalMode}
                             </h2>
@@ -294,7 +311,7 @@ const ContentView: React.FC = () => {
                                         <input className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-violet-500 transition-all" placeholder={nodeForm.type === 'CLASS' ? "e.g. Class 10" : "e.g. JEE Main"} value={nodeForm.name} onChange={e => setNodeForm({...nodeForm, name: e.target.value})} />
                                     </div>
                                     
-                                    <button onClick={saveNode} className="w-full py-4.5 bg-slate-900 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">Synchronize to Core</button>
+                                    <button onClick={saveNode} className="w-full py-4.5 bg-slate-900 dark:bg-violet-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl active:scale-95 hover:bg-violet-700 dark:hover:bg-violet-500 transition-all">Synchronize to Core</button>
                                 </div>
                             ) : (
                                 <div className="space-y-5">
@@ -648,22 +665,22 @@ const AdminApp: React.FC = () => {
 
     return (
         <div className={`flex h-screen w-full overflow-hidden ${isDark ? 'dark bg-[#050510] text-white' : 'bg-slate-50 text-slate-900'}`}>
-            <aside className={`w-72 border-r flex flex-col p-6 space-y-8 transition-colors ${isDark ? 'bg-[#07070f] border-white/5' : 'bg-white border-slate-200'}`}>
+            <aside className={`w-72 border-r flex flex-col p-6 space-y-8 transition-colors duration-300 ${isDark ? 'bg-[#07070f] border-white/5' : 'bg-white border-slate-200'}`}>
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-10 h-10 rounded-xl shadow-lg" />
                     <div><h2 className={`text-sm font-black uppercase tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>CBSE TOPPERS</h2><p className="text-[9px] font-black text-violet-500 uppercase tracking-widest mt-0.5">Terminal v3.0</p></div>
                 </div>
                 
                 <div className="flex-1 space-y-2">
-                    <p className={`text-[8px] font-black uppercase tracking-[0.3em] mb-4 ${isDark ? 'text-white/10' : 'text-slate-300'}`}>Command Core</p>
+                    <p className={`text-[8px] font-black uppercase tracking-[0.3em] mb-4 ${isDark ? 'text-white/10' : 'text-slate-400'}`}>Command Core</p>
                     {navItems.map(n => <SidebarItem key={n.id} {...n} active={view === n.id} onClick={() => setView(n.id)} />)}
                 </div>
 
                 <div className="pt-4 space-y-2 border-t border-slate-100 dark:border-white/5">
-                    <button onClick={() => setIsDark(!isDark)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDark ? 'text-amber-400 bg-amber-400/10' : 'text-indigo-600 bg-indigo-50'}`}>
+                    <button onClick={() => setIsDark(!isDark)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isDark ? 'text-amber-400 bg-amber-400/10' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'}`}>
                         {isDark ? <Sun size={14}/> : <Moon size={14}/>} {isDark ? 'Emulate Light' : 'Secure Dark'}
                     </button>
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-400/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"><LogOut size={16} /> Logout Terminal</button>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"><LogOut size={16} /> Logout Terminal</button>
                 </div>
             </aside>
             <main className={`flex-1 overflow-y-auto p-12 custom-scrollbar transition-colors ${isDark ? 'bg-[#050510]' : 'bg-slate-50'}`}>
