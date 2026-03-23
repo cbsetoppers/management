@@ -1,13 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
-import { decode } from '../utils/crypto';
+import { decode as legacyDecode } from '../utils/crypto';
 import { decryptStudent, encryptMaterial, decryptMaterial } from './cryptoService';
 
 // High-security obfuscated DBMS secrets
 const _U = "b2MuZXNhYmFwdXMubWhvc2Fwb3Z4Y3ZtZGZ6aGtka2gvLzpzcHR0aA==";
 const _K = "Y2lYVXU2d2VvMG01NUdiX05hU25aYklYOVdXQks1ekhIeF9JOWZZYTZsaS5RZjRjak54Z0RPMmdETXlvakl3aFhaaXdDTzNZVE53TVRNM2NUTTZJQ2RobG1Jc0lTWnM5bWNmVjJZcFpuY2xObkk2SVNaczltY2l3aUl0aDJiekZHY3ZaSGVqWlhia1ptZW90R1pyaG1JNklpWmxKbklzSVNaekZtWWhCWGR6SmlPaU0zY3BKeWUuOUpDVlhwa0k2SUNjNVJuSXNJaU4xSXpVSUppT2ljR2JoSnll";
 
-const SUPABASE_URL = decode(_U);
-const SUPABASE_ANON_KEY = decode(_K);
+const SUPABASE_URL = legacyDecode(_U);
+const SUPABASE_ANON_KEY = legacyDecode(_K);
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -21,6 +21,50 @@ export interface Operator {
     student_id?: string | null;
     created_at: string;
 }
+
+// ─── UNIVERSAL TREE ARCHITECTURE ───────────────────────────────────
+
+export type NodeType = 'CLASS' | 'STREAM' | 'SECTION' | 'FOLDER' | 'CHAPTER' | 'TOPIC' | 'EXAM';
+
+export interface TreeNode {
+    id: string;
+    parent_id: string | null;
+    name: string;
+    node_type: NodeType;
+    order_index: number;
+    metadata: any;
+    created_at: string;
+    children?: TreeNode[]; // For recursive UI needs
+}
+
+export const fetchNodes = async (type?: NodeType, parentId: string | null = null): Promise<TreeNode[]> => {
+    let query = supabase.from('tree').select('*');
+    if (type) query = query.eq('node_type', type);
+    if (parentId !== undefined) {
+        if (parentId === null) query = query.is('parent_id', null);
+        else query = query.eq('parent_id', parentId);
+    }
+    const { data, error } = await query.order('order_index');
+    if (error) throw error;
+    return data || [];
+};
+
+export const createNode = async (node: Partial<TreeNode>) => {
+    const { data, error } = await supabase.from('tree').insert([node]).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const updateNode = async (id: string, updates: Partial<TreeNode>) => {
+    const { data, error } = await supabase.from('tree').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const deleteNode = async (id: string) => {
+    const { error } = await supabase.from('tree').delete().eq('id', id);
+    if (error) throw error;
+};
 
 // ─── ADMIN AUTH ─────────────────────────────────────────────────────
 
@@ -48,54 +92,13 @@ export const signOutOperator = async () => {
     await supabase.auth.signOut();
 };
 
-export const fetchAllOperators = async (): Promise<Operator[]> => {
-    const { data, error } = await supabase.from('operators').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
-};
-
-export const createOperator = async (op: any) => {
-    const { data, error } = await supabase.from('operators').insert([op]).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const deleteOperator = async (id: string) => {
-    await supabase.from('operators').delete().eq('id', id);
-};
-
-// ─── CONTENT MANAGEMENT (STRICT RULES) ──────────────────────────────
+// ─── MATERIALS (Universal Link to Tree Nodes) ───────────────────────
 
 export type MaterialType = 'pdf' | 'image' | 'video';
 
-export interface Subject {
-    id: string;
-    name: string;
-    code: string;
-    tag: string;
-    target_class: string; // Keep for legacy if needed, or we can replace
-    target_stream?: string; // Keep for legacy
-    target_classes?: string[];
-    target_streams?: string[];
-    target_exams?: string[];
-    icon_url?: string;
-    order_index: number;
-    created_at: string;
-}
-
-export interface Folder {
-    id: string;
-    subject_id: string;
-    parent_id?: string | null;
-    name: string;
-    order_index: number;
-    created_at: string;
-}
-
 export interface Material {
     id: string;
-    folder_id?: string | null;
-    subject_id: string;
+    node_id: string; // Unified link to 'tree'
     title: string;
     type: MaterialType;
     url: string;
@@ -103,81 +106,12 @@ export interface Material {
     created_at: string;
 }
 
-export interface StoreProduct {
-    id: string;
-    name: string;
-    description: string;
-    image_url: string;
-    image_urls?: string[]; // Multiple photos
-    file_url?: string;     // GDrive URL for purchased users
-    preview_url?: string;  // PDF Preview URL
-    mrp: number;
-    selling_price: number;
-    stock_status: 'In Stock' | 'Out of Stock';
-    category?: string;
-    order_index: number;
-    created_at: string;
-}
-
-
-// SUBJECTS
-export const fetchSubjects = async (): Promise<Subject[]> => {
-    const { data, error } = await supabase.from('subjects').select('*').order('order_index');
-    if (error) throw error;
-    return data || [];
-};
-
-export const createSubject = async (subject: Partial<Subject>) => {
-    // Validation is enforced by DB constraints, but we can catch it here too
-    const { data, error } = await supabase.from('subjects').insert([subject]).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const deleteSubject = async (id: string) => {
-    await supabase.from('subjects').delete().eq('id', id);
-};
-
-export const updateSubject = async (id: string, updates: Partial<Subject>) => {
-    const { data, error } = await supabase.from('subjects').update(updates).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-};
-
-// FOLDERS
-export const fetchFolders = async (subjectId: string, parentId: string | null = null): Promise<Folder[]> => {
-    let query = supabase.from('folders').select('*').eq('subject_id', subjectId);
-    if (parentId) query = query.eq('parent_id', parentId);
-    else query = query.is('parent_id', null);
-
-    const { data, error } = await query.order('order_index');
-    if (error) throw error;
-    return data || [];
-};
-
-export const createFolder = async (folder: Partial<Folder>) => {
-    const { data, error } = await supabase.from('folders').insert([folder]).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const deleteFolder = async (id: string) => {
-    await supabase.from('folders').delete().eq('id', id);
-};
-
-export const updateFolder = async (id: string, updates: Partial<Folder>) => {
-    const { data, error } = await supabase.from('folders').update(updates).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-};
-
-// MATERIALS
-export const fetchMaterials = async (subjectId: string, folderId: string | null = null): Promise<Material[]> => {
-    let query = supabase.from('materials').select('*').eq('subject_id', subjectId);
-    if (folderId) query = query.eq('folder_id', folderId);
-    else query = query.is('folder_id', null);
-
-    const { data, error } = await query.order('order_index');
+export const fetchMaterials = async (nodeId: string): Promise<Material[]> => {
+    const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('node_id', nodeId)
+        .order('order_index');
     if (error) throw error;
     return (data || []).map(decryptMaterial);
 };
@@ -188,40 +122,56 @@ export const createMaterial = async (material: Partial<Material>) => {
     return decryptMaterial(data);
 };
 
-export const deleteMaterial = async (id: string) => {
-    await supabase.from('materials').delete().eq('id', id);
-};
-
 export const updateMaterial = async (id: string, updates: Partial<Material>) => {
     const { data, error } = await supabase.from('materials').update(encryptMaterial(updates)).eq('id', id).select().single();
     if (error) throw error;
     return decryptMaterial(data);
 };
 
-// STORE PRODUCTS
+export const deleteMaterial = async (id: string) => {
+    await supabase.from('materials').delete().eq('id', id);
+};
+
+// ─── STORE & COMMERCE (PascalCase Tables) ───────────────────────────
+
+export interface StoreProduct {
+    id: string;
+    name: string;
+    description: string;
+    image_url: string;
+    image_urls?: string[];
+    file_url?: string;
+    preview_url?: string;
+    mrp: number;
+    selling_price: number;
+    stock_status: 'In Stock' | 'Out of Stock';
+    category?: string;
+    order_index: number;
+    created_at: string;
+}
+
 export const fetchStoreProducts = async (): Promise<StoreProduct[]> => {
-    const { data, error } = await supabase.from('store_products').select('*').order('order_index');
+    const { data, error } = await supabase.from('StoreProducts').select('*').order('order_index');
     if (error) throw error;
     return data || [];
 };
 
 export const createStoreProduct = async (product: Partial<StoreProduct>) => {
-    const { data, error } = await supabase.from('store_products').insert([product]).select().single();
+    const { data, error } = await supabase.from('StoreProducts').insert([product]).select().single();
+    if (error) throw error;
+    return data;
+};
+
+export const updateStoreProduct = async (id: string, updates: Partial<StoreProduct>) => {
+    const { data, error } = await supabase.from('StoreProducts').update(updates).eq('id', id).select().single();
     if (error) throw error;
     return data;
 };
 
 export const deleteStoreProduct = async (id: string) => {
-    await supabase.from('store_products').delete().eq('id', id);
+    await supabase.from('StoreProducts').delete().eq('id', id);
 };
 
-export const updateStoreProduct = async (id: string, updates: Partial<StoreProduct>) => {
-    const { data, error } = await supabase.from('store_products').update(updates).eq('id', id).select().single();
-    if (error) throw error;
-    return data;
-};
-
-// STORE BANNERS
 export interface StoreBanner {
     id: string;
     image_url: string;
@@ -230,157 +180,33 @@ export interface StoreBanner {
 }
 
 export const fetchStoreBanners = async (): Promise<StoreBanner[]> => {
-    const { data, error } = await supabase.from('store_banners').select('*').order('order_index');
+    const { data, error } = await supabase.from('StoreBanners').select('*').order('order_index');
     if (error) throw error;
     return data || [];
 };
 
 export const createStoreBanner = async (banner: Partial<StoreBanner>) => {
-    const { data, error } = await supabase.from('store_banners').insert([banner]).select().single();
+    const { data, error } = await supabase.from('StoreBanners').insert([banner]).select().single();
     if (error) throw error;
     return data;
 };
 
 export const deleteStoreBanner = async (id: string) => {
-    await supabase.from('store_banners').delete().eq('id', id);
+    await supabase.from('StoreBanners').delete().eq('id', id);
 };
 
-// ─── ANALYTICS (DASHBOARD) ───────────────────────────────────────────
+// ─── ANALYTICS & DASHBOARD ──────────────────────────────────────────
 
 export const fetchAdminStats = async () => {
     const { count: studentCount } = await supabase.from('students').select('*', { count: 'exact', head: true });
-    const { count: subjectCount } = await supabase.from('subjects').select('*', { count: 'exact', head: true });
+    const { count: nodeCount } = await supabase.from('tree').select('*', { count: 'exact', head: true });
 
     return {
         studentCount: studentCount || 0,
-        subjectCount: subjectCount || 0,
-        quizCount: 0, // Placeholder
+        subjectCount: nodeCount || 0, // Now includes all levels
+        quizCount: 0,
         accuracy: 0
     };
-};
-
-export const fetchClasses = async (): Promise<{id: string, name: string, class_type?: string}[]> => {
-    const { data } = await supabase.from('classes').select('*').order('id');
-    return data || [];
-};
-
-export const addClass = async (name: string, type?: string) => {
-    await supabase.from('classes').insert({ name, class_type: type });
-};
-
-export const updateClass = async (id: string, name: string, type?: string) => {
-    await supabase.from('classes').update({ name, class_type: type }).eq('id', id);
-};
-
-export const deleteClass = async (id: string) => {
-    await supabase.from('classes').delete().eq('id', id);
-};
-
-export const fetchExams = async (): Promise<{id: string, name: string}[]> => {
-    const { data } = await supabase.from('competitive_exams').select('id, name').order('name');
-    return data || [];
-};
-
-export const addExam = async (name: string) => {
-    await supabase.from('competitive_exams').insert({ name });
-};
-
-export const updateExam = async (id: string, name: string) => {
-    await supabase.from('competitive_exams').update({ name }).eq('id', id);
-};
-
-export const deleteExam = async (id: string) => {
-    await supabase.from('competitive_exams').delete().eq('id', id);
-};
-
-export const fetchStreams = async (): Promise<{id: string, name: string}[]> => {
-    const { data } = await supabase.from('streams').select('id, name').order('name');
-    return data || [];
-};
-
-export const addStream = async (name: string) => {
-    await supabase.from('streams').insert({ name });
-};
-
-export const updateStream = async (id: string, name: string) => {
-    await supabase.from('streams').update({ name }).eq('id', id);
-};
-
-export const deleteStream = async (id: string) => {
-    await supabase.from('streams').delete().eq('id', id);
-};
-
-export const fetchClassStreams = async (classId?: string): Promise<{ class_id: string; stream_id: string }[]> => {
-    let query = supabase.from('class_streams').select('*');
-    if (classId) query = query.eq('class_id', classId);
-    const { data } = await query;
-    return data || [];
-};
-
-export const linkStreamToClass = async (classId: string, streamId: string) => {
-    await supabase.from('class_streams').upsert({ class_id: classId, stream_id: streamId });
-};
-
-// SYLLABUS TRACKER (DYNAMIC)
-export interface SyllabusTopic {
-    id: string;
-    chapter_id: string;
-    topic_name: string;
-    order_index: number;
-}
-
-export interface SyllabusChapter {
-    id: string;
-    class_id: string;
-    subject_name: string;
-    chapter_name: string;
-    chapter_number: number;
-    syllabus_topics?: SyllabusTopic[];
-}
-
-export const fetchSyllabusChapters = async (classId: string) => {
-    const { data, error } = await supabase
-        .from('syllabus_chapters')
-        .select('*, syllabus_topics(*)')
-        .eq('class_id', classId)
-        .order('chapter_number');
-    if (error) throw error;
-    return data || [];
-};
-
-export const createSyllabusChapter = async (chap: Partial<SyllabusChapter>) => {
-    const { data, error } = await supabase.from('syllabus_chapters').insert(chap).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const updateSyllabusChapter = async (id: string, chap: Partial<SyllabusChapter>) => {
-    const { error } = await supabase.from('syllabus_chapters').update(chap).eq('id', id);
-    if (error) throw error;
-};
-
-export const deleteSyllabusChapter = async (id: string) => {
-    const { error } = await supabase.from('syllabus_chapters').delete().eq('id', id);
-    if (error) throw error;
-};
-
-export const createSyllabusTopic = async (topic: Partial<SyllabusTopic>) => {
-    const { data, error } = await supabase.from('syllabus_topics').insert(topic).select().single();
-    if (error) throw error;
-    return data;
-};
-
-export const updateSyllabusTopic = async (id: string, topic: Partial<SyllabusTopic>) => {
-    const { error } = await supabase.from('syllabus_topics').update(topic).eq('id', id);
-    if (error) throw error;
-};
-
-export const deleteSyllabusTopic = async (id: string) => {
-    const { error } = await supabase.from('syllabus_topics').delete().eq('id', id);
-    if (error) throw error;
-};
-export const unlinkStreamFromClass = async (classId: string, streamId: string) => {
-    await supabase.from('class_streams').delete().match({ class_id: classId, stream_id: streamId });
 };
 
 export const fetchAllStudents = async () => {
@@ -388,6 +214,8 @@ export const fetchAllStudents = async () => {
     if (error) throw error;
     return (data || []).map(decryptStudent);
 };
+
+// ─── SETTINGS & SUBSCRIPTIONS ───────────────────────────────────────
 
 export const fetchMaintenanceSettings = async () => {
     const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
@@ -401,6 +229,7 @@ export const updateMaintenanceSettings = async (settings: any) => {
     if (error) throw error;
     return data;
 };
+
 export interface SubscriptionPlan {
     id: string;
     name: string;
@@ -426,4 +255,57 @@ export const updateSubscriptionPlan = async (id: string, updates: Partial<Subscr
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
     if (error) throw error;
+};
+// ─── DASHBOARD CONTENT (Universal News/Alerts) ───────────────────
+
+export interface DashboardContent {
+    id: string;
+    parent_id: string | null;
+    title: string;
+    content?: string;
+    type: 'ALERT' | 'NEWS' | 'UPDATE';
+    tag?: string;
+    order_index: number;
+    created_at: string;
+}
+
+export const fetchDashboardContent = async (): Promise<DashboardContent[]> => {
+    const { data, error } = await supabase.from('DashboardContent').select('*').order('order_index');
+    if (error) throw error;
+    return data || [];
+};
+
+// ─── PURCHASE & PROGRESS ──────────────────────────────────────────
+
+export interface PurchaseRecord {
+    id: string;
+    student_id: string;
+    product_id: string;
+    status: 'success' | 'failed' | 'pending';
+    amount: number;
+    created_at: string;
+}
+
+export const fetchPurchaseHistory = async (studentId?: string): Promise<PurchaseRecord[]> => {
+    let query = supabase.from('PurchaseHistory').select('*');
+    if (studentId) query = query.eq('student_id', studentId);
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+};
+
+export const updateSyllabusProgress = async (studentId: string, topicId: string, isCompleted: boolean) => {
+    const { error } = await supabase.from('SyllabusProgress').upsert({
+        student_id: studentId,
+        topic_id: topicId,
+        is_completed: isCompleted,
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'student_id,topic_id' });
+    if (error) throw error;
+};
+
+export const fetchSyllabusProgress = async (studentId: string) => {
+    const { data, error } = await supabase.from('SyllabusProgress').select('*').eq('student_id', studentId);
+    if (error) throw error;
+    return data || [];
 };
